@@ -6,6 +6,8 @@ from dipy.io.image import load_nifti
 from dipy.io.gradients import read_bvals_bvecs
 from dipy.core.gradients import gradient_table
 from dipy.segment.mask import median_otsu
+from dipy.align.reslice import reslice
+from numpy import savez_compressed
 import dipy.reconst.dti as dti
 
 # settings
@@ -13,7 +15,7 @@ path = "data\\100307_3T_Diffusion_preproc\\100307\\T1w\\Diffusion\\"
 dw_file = path + "data.nii.gz"
 bvals_file = path + "bvals"
 bvecs_file = path + "bvecs"
-mask_file = path + "nodif_brain_mask.nii.gz" # median_otsu used mow instead
+mask_file = path + "nodif_brain_mask.nii.gz" # not used (median_otsu used instead)
 grad_file = path + "grad_dev.nii.gz"
 
 upsample_rate = 2 # the super-resolution factor (m in paper)
@@ -23,46 +25,28 @@ no_rnds = 8 # no of separate training sets to be created
 
 def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     # read in the DWI data
-    data, affine, voxsize = load_nifti(dw_file, return_voxsize=True)
+    data_hr, affine_hr, voxsize = load_nifti(dw_file, return_voxsize=True)
     # read bvals and bvecs text files
     bvals, bvecs = read_bvals_bvecs(bvals_file, bvecs_file)
     gtab = gradient_table(bvals, bvecs)
-    # read the brain mask
-    maskdata, mask = median_otsu(data, vol_idx=range(10, 50), median_radius=3,
+    # get the brain mask
+    maskdata_hr, mask_hr = median_otsu(data_hr, vol_idx=range(10, 50), median_radius=3,
                              numpass=1, autocrop=True, dilate=2)
-    print(maskdata.shape)
-    tenmodel = dti.TensorModel(gtab)
-    tenfit = tenmodel.fit(maskdata[:, :, 51:52])
     
-    return tenfit
-
-tenfit = compute_dti_respairs(dw_file, bvals_file, bvecs_file)
-
-from dipy.reconst.dti import fractional_anisotropy, color_fa
-
-FA = fractional_anisotropy(tenfit.evals)
-FA[np.isnan(FA)] = 0
-
-FA = np.clip(FA, 0, 1)
-RGB = color_fa(FA, tenfit.evecs)
-
-from dipy.data import get_sphere
-sphere = get_sphere('repulsion724')
-
-from dipy.viz import window, actor
-
-scene = window.Scene()
-
-# evals = tenfit.evals[13:43, 44:74, 28:29]
-# evecs = tenfit.evecs[13:43, 44:74, 28:29]
-evals = tenfit.evals
-evecs = tenfit.evecs
-
-cfa = RGB
-cfa /= cfa.max()
-
-scene.add(actor.tensor_slicer(evals, evecs, scalar_colors=cfa, sphere=sphere,
-                              scale=0.3))
-
-window.record(scene, n_frames=1, out_path='tensor_ellipsoids.png',
-              size=(600, 600))
+    # compute DTI for the original high-res DWI
+    tenmodel = dti.TensorModel(gtab)
+    tenfit_hr = tenmodel.fit(maskdata_hr)
+    print(tenfit_hr.quadratic_form.shape)
+    savez_compressed('tensors_hr.npz', tenfit_hr.quadratic_form)
+    
+    # downsample the DWI
+    data_lr, affine_lr = reslice(data_hr, affine_hr, voxsize, [i*datasample_rate for i in voxsize])
+    # get the brain mask
+    maskdata_lr, mask_lr = median_otsu(data_lr, vol_idx=range(10, 50), median_radius=3,
+                             numpass=1, autocrop=True, dilate=2)
+    # compute DTI for the downsampled DWI
+    tenfit_lr = tenmodel.fit(maskdata_lr)
+    print(tenfit_lr.quadratic_form.shape)
+    savez_compressed('tensors_lr.npz', tenfit_lr.quadratic_form)
+    
+compute_dti_respairs(dw_file, bvals_file, bvecs_file)
