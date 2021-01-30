@@ -15,13 +15,21 @@ path = "data\\100307_3T_Diffusion_preproc\\100307\\T1w\\Diffusion\\"
 dw_file = path + "data.nii.gz"
 bvals_file = path + "bvals"
 bvecs_file = path + "bvecs"
-mask_file = path + "nodif_brain_mask.nii.gz" # not used (median_otsu used instead)
+# not used (median_otsu used instead)
+mask_file = path + "nodif_brain_mask.nii.gz"
 grad_file = path + "grad_dev.nii.gz"
 
-upsample_rate = 2 # the super-resolution factor (m in paper)
-input_radius = 2 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
-datasample_rate = 2 # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
-no_rnds = 8 # no of separate training sets to be created
+upsample_rate = 2  # the super-resolution factor (m in paper)
+# the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
+input_radius = 2
+datasample_rate = 2  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
+no_rnds = 8  # no of separate training sets to be created
+
+"""
+Computes DTIs on the original DWIs and its downsampled version.
+As a result, we obtain high-res and low-res DTIs.
+"""
+
 
 def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     # read in the DWI data
@@ -29,24 +37,44 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     # read bvals and bvecs text files
     bvals, bvecs = read_bvals_bvecs(bvals_file, bvecs_file)
     gtab = gradient_table(bvals, bvecs)
-    # get the brain mask
+    # get the brain mask for high-res DWI
     maskdata_hr, mask_hr = median_otsu(data_hr, vol_idx=range(10, 50), median_radius=3,
-                             numpass=1, autocrop=True, dilate=2)
-    
+                                       numpass=1, autocrop=False, dilate=2)
+
     # compute DTI for the original high-res DWI
     tenmodel = dti.TensorModel(gtab)
     tenfit_hr = tenmodel.fit(maskdata_hr)
-    print(tenfit_hr.quadratic_form.shape)
-    savez_compressed('tensors_hr.npz', tenfit_hr.quadratic_form)
-    
+    quadratic_tensors_hr = tenfit_hr.quadratic_form
+    print("High resolutions tensors:", quadratic_tensors_hr.shape)
+
     # downsample the DWI
-    data_lr, affine_lr = reslice(data_hr, affine_hr, voxsize, [i*datasample_rate for i in voxsize])
-    # get the brain mask
+    data_lr, affine_lr = reslice(data_hr, affine_hr, voxsize, [
+                                 i*upsample_rate for i in voxsize])
+    # get the brain mask for low-res DWI
     maskdata_lr, mask_lr = median_otsu(data_lr, vol_idx=range(10, 50), median_radius=3,
-                             numpass=1, autocrop=True, dilate=2)
+                                       numpass=1, autocrop=False, dilate=2)
     # compute DTI for the downsampled DWI
     tenfit_lr = tenmodel.fit(maskdata_lr)
-    print(tenfit_lr.quadratic_form.shape)
-    savez_compressed('tensors_lr.npz', tenfit_lr.quadratic_form)
-    
-compute_dti_respairs(dw_file, bvals_file, bvecs_file)
+    quadratic_tensors_lr = tenfit_lr.quadratic_form
+    print("Low resolutions tensors:", quadratic_tensors_lr.shape)
+
+    # save DTIs and masks to a file
+    savez_compressed('tensors.npz', tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
+                     tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr)
+
+
+"""
+Extracts patch-pairs from low/high resolution DTIs
+to create an exhaustive list of all valid patch-pairs and stores them
+in a large matrix.
+"""
+
+
+def compute_patchlib(input_radius, datasample_rate):
+    tensor_file = np.load('tensors.npz')
+    tensors_hr = tensor_file['tensors_hr']
+    mask_hr = tensor_file['mask_hr']
+    tensors_lr = tensor_file['tensors_lr']
+    mask_lr = tensor_file['mask_lr']
+
+compute_patchlib(input_radius, datasample_rate)
