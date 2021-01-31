@@ -43,6 +43,7 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
 
     # compute DTI for the original high-res DWI
     tenmodel = dti.TensorModel(gtab)
+    print("Fitting high resolution DTs...")
     tenfit_hr = tenmodel.fit(maskdata_hr)
     quadratic_tensors_hr = tenfit_hr.quadratic_form
     print("High resolutions tensors:", quadratic_tensors_hr.shape)
@@ -54,6 +55,7 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     maskdata_lr, mask_lr = median_otsu(data_lr, vol_idx=range(10, 50), median_radius=3,
                                        numpass=1, autocrop=False, dilate=2)
     # compute DTI for the downsampled DWI
+    print("Fitting low resolution DTs...")
     tenfit_lr = tenmodel.fit(maskdata_lr)
     quadratic_tensors_lr = tenfit_lr.quadratic_form
     print("Low resolutions tensors:", quadratic_tensors_lr.shape)
@@ -71,10 +73,36 @@ in a large matrix.
 
 
 def compute_patchlib(input_radius, datasample_rate):
+    n = input_radius
     tensor_file = np.load('tensors.npz')
-    tensors_hr = tensor_file['tensors_hr']
-    mask_hr = tensor_file['mask_hr']
-    tensors_lr = tensor_file['tensors_lr']
     mask_lr = tensor_file['mask_lr']
+
+    print("Computing locations of valid patch pairs...")
+
+    # list of central indices for lr
+    indices_lr_features = []
+
+    dims = mask_lr.shape
+    for x in range(n, dims[0] - n):
+        for y in range(n, dims[1] - n):
+            for z in range(n, dims[2] - n):
+
+                if mask_lr[x + n, y + n, z + n] and \
+                        mask_lr[x + n, y + n, z - n] and \
+                        mask_lr[x + n, y - n, z + n] and \
+                        mask_lr[x + n, y - n, z - n] and \
+                        mask_lr[x - n, y + n, z + n] and \
+                        mask_lr[x - n, y + n, z - n] and \
+                        mask_lr[x - n, y - n, z + n] and \
+                        mask_lr[x - n, y - n, z - n]:
+                    indices_lr_features.append((x, y, z))
+
+    # list of corner indices for hr
+    indices_hr_features = [(x*n, y*n, z*n)
+                           for (x, y, z) in indices_lr_features]
+
+    tensors_hr = tensor_file['tensors_hr']
+    tensors_lr = tensor_file['tensors_lr']
+
 
 compute_patchlib(input_radius, datasample_rate)
