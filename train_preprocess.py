@@ -87,6 +87,7 @@ def compute_patchlib(input_radius, datasample_rate):
         for y in range(n, dims[1] - n):
             for z in range(n, dims[2] - n):
 
+                # save location if every corner of the cubic patch is contained within the brain
                 if mask_lr[x + n, y + n, z + n] and \
                         mask_lr[x + n, y + n, z - n] and \
                         mask_lr[x + n, y - n, z + n] and \
@@ -101,8 +102,22 @@ def compute_patchlib(input_radius, datasample_rate):
     indices_hr_features = [(x*n, y*n, z*n)
                            for (x, y, z) in indices_lr_features]
 
+    print("Extracting patch pairs...")
     tensors_hr = tensor_file['tensors_hr']
     tensors_lr = tensor_file['tensors_lr']
+    
+    # flatten DT matrices
+    s_hr = tensors_hr.shape
+    tensors_hr = np.reshape(tensors_hr, (s_hr[0], s_hr[1], s_hr[2], 9))
+    s_lr = tensors_lr.shape
+    tensors_lr = np.reshape(tensors_lr, (s_lr[0], s_lr[1], s_lr[2], 9))
+    
+    # remove duplicate entries to obtain the 6 unique parameters
+    tensors_hr = np.delete(tensors_hr, [3, 6, 7], axis=3)
+    tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
+    
+    # extract lr patches
+    
 
 
 compute_patchlib(input_radius, datasample_rate)
