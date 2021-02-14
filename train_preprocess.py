@@ -142,4 +142,5 @@ def compute_patchlib(input_radius, c, datasample_rate):
     # save patches to a file
     savez_compressed('patches.npz', patches_lr=lr_patches, patches_hr=hr_patches)
 
+compute_dti_respairs(dw_file, bvals_file, bvecs_file)
 compute_patchlib(input_radius, upsample_rate, datasample_rate)
