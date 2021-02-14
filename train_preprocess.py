@@ -72,15 +72,16 @@ in a large matrix.
 """
 
 
-def compute_patchlib(input_radius, datasample_rate):
+def compute_patchlib(input_radius, c, datasample_rate):
     n = input_radius
+    m = upsample_rate
     tensor_file = np.load('tensors.npz')
     mask_lr = tensor_file['mask_lr']
 
     print("Computing locations of valid patch pairs...")
 
     # list of central indices for lr
-    indices_lr_features = []
+    c_indices_lr_features = []
 
     dims = mask_lr.shape
     for x in range(n, dims[0] - n):
@@ -96,11 +97,18 @@ def compute_patchlib(input_radius, datasample_rate):
                         mask_lr[x - n, y + n, z - n] and \
                         mask_lr[x - n, y - n, z + n] and \
                         mask_lr[x - n, y - n, z - n]:
-                    indices_lr_features.append((x, y, z))
+                    c_indices_lr_features.append((x, y, z))
 
-    # list of corner indices for hr
-    indices_hr_features = [(x*n, y*n, z*n)
-                           for (x, y, z) in indices_lr_features]
+    # list of start and end indices for lr
+    indices_lr_features = [(x-n, x+n+1, y-n, y+n+1, z-n, z+n+1)
+                           for (x, y, z) in c_indices_lr_features]
+    
+    # list of start and end indices for hr
+    indices_hr_features = [(x*n, x*n + m, y*n, y*n + m, z*n, z*n + m)
+                           for (x, y, z) in c_indices_lr_features]
+    
+    n_pairs = len(indices_lr_features)
+    lr_size = 2*n + 1
 
     print("Extracting patch pairs...")
     tensors_hr = tensor_file['tensors_hr']
@@ -114,10 +122,24 @@ def compute_patchlib(input_radius, datasample_rate):
     
     # remove duplicate entries to obtain the 6 unique parameters
     tensors_hr = np.delete(tensors_hr, [3, 6, 7], axis=3)
-    tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
+    tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3) 
     
     # extract lr patches
+    lr_patches = np.zeros((n_pairs, lr_size, lr_size, lr_size, 6))
+    for patch_index, indices in enumerate(indices_lr_features):
+        s_x, e_x, s_y, e_y, s_z, e_z = indices
+        patch = tensors_lr[s_x:e_x, s_y:e_y, s_z:e_z]
+        lr_patches[patch_index] = patch
     
+    # extract hr patches
+    hr_patches = np.zeros((n_pairs, m, m, m, 6))
+    for patch_index, indices in enumerate(indices_hr_features):
+        s_x, e_x, s_y, e_y, s_z, e_z = indices
+        patch = tensors_hr[s_x:e_x, s_y:e_y, s_z:e_z]
+        hr_patches[patch_index] = patch
+    
+    print("Saving patch pairs...")
+    # save patches to a file
+    savez_compressed('patches.npz', patches_lr=lr_patches, patches_hr=hr_patches)
 
-
-compute_patchlib(input_radius, datasample_rate)
+compute_patchlib(input_radius, upsample_rate, datasample_rate)
