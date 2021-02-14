@@ -72,7 +72,7 @@ in a large matrix.
 """
 
 
-def compute_patchlib(input_radius, c, datasample_rate):
+def compute_patchlib(input_radius, upsample_rate, datasample_rate):
     n = input_radius
     m = upsample_rate
     tensor_file = np.load('tensors.npz')
