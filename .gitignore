@@ -1,3 +1,7 @@
 /data/*
+/.ipynb_checkpoints/*
 patches.npz
-tensors.npz
+tensors_hr.npz
+tensors_lr.npz
+tensor_ellipsoids_hr.png
+tensor_ellipsoids_lr.png

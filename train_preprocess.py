@@ -46,7 +46,13 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     print("Fitting high resolution DTs...")
     tenfit_hr = tenmodel.fit(maskdata_hr)
     quadratic_tensors_hr = tenfit_hr.quadratic_form
+    evals_hr = tenfit_hr.evals
+    evecs_hr = tenfit_hr.evecs
     print("High resolutions tensors:", quadratic_tensors_hr.shape)
+    
+    # save DTIs, eigenvectors, eigenvalues and masks to a file
+    savez_compressed('tensors_hr.npz', tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
+                     evals_hr=evals_hr, evecs_hr=evecs_hr)
 
     # downsample the DWI
     data_lr, affine_lr = reslice(data_hr, affine_hr, voxsize, [
@@ -58,12 +64,14 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     print("Fitting low resolution DTs...")
     tenfit_lr = tenmodel.fit(maskdata_lr)
     quadratic_tensors_lr = tenfit_lr.quadratic_form
+    evals_lr = tenfit_lr.evals
+    evecs_lr = tenfit_lr.evecs
     print("Low resolutions tensors:", quadratic_tensors_lr.shape)
 
-    # save DTIs and masks to a file
-    savez_compressed('tensors.npz', tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
-                     tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr)
-
+    # save DTIs, eigenvectors, eigenvalues and masks to a file
+    # save DTIs, eigenvectors, eigenvalues and masks to a file
+    savez_compressed('tensors_lr.npz', tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr,
+                     evals_lr=evals_lr, evecs_lr=evecs_lr)
 
 """
 Extracts patch-pairs from low/high resolution DTIs
@@ -75,8 +83,9 @@ in a large matrix.
 def compute_patchlib(input_radius, upsample_rate, datasample_rate):
     n = input_radius
     m = upsample_rate
-    tensor_file = np.load('tensors.npz')
-    mask_lr = tensor_file['mask_lr']
+    tensor_file_hr = np.load('tensors_hr.npz')
+    tensor_file_lr = np.load('tensors_lr.npz')
+    mask_lr = tensor_file_lr['mask_lr']
 
     print("Computing locations of valid patch pairs...")
 
@@ -102,45 +111,47 @@ def compute_patchlib(input_radius, upsample_rate, datasample_rate):
     # list of start and end indices for lr
     indices_lr_features = [(x-n, x+n+1, y-n, y+n+1, z-n, z+n+1)
                            for (x, y, z) in c_indices_lr_features]
-    
+
     # list of start and end indices for hr
     indices_hr_features = [(x*n, x*n + m, y*n, y*n + m, z*n, z*n + m)
                            for (x, y, z) in c_indices_lr_features]
-    
+
     n_pairs = len(indices_lr_features)
     lr_size = 2*n + 1
 
     print("Extracting patch pairs...")
-    tensors_hr = tensor_file['tensors_hr']
-    tensors_lr = tensor_file['tensors_lr']
-    
+    tensors_hr = tensor_file_hr['tensors_hr']
+    tensors_lr = tensor_file_lr['tensors_lr']
+
     # flatten DT matrices
     s_hr = tensors_hr.shape
     tensors_hr = np.reshape(tensors_hr, (s_hr[0], s_hr[1], s_hr[2], 9))
     s_lr = tensors_lr.shape
     tensors_lr = np.reshape(tensors_lr, (s_lr[0], s_lr[1], s_lr[2], 9))
-    
+
     # remove duplicate entries to obtain the 6 unique parameters
     tensors_hr = np.delete(tensors_hr, [3, 6, 7], axis=3)
-    tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3) 
-    
+    tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
+
     # extract lr patches
     lr_patches = np.zeros((n_pairs, lr_size, lr_size, lr_size, 6))
     for patch_index, indices in enumerate(indices_lr_features):
         s_x, e_x, s_y, e_y, s_z, e_z = indices
         patch = tensors_lr[s_x:e_x, s_y:e_y, s_z:e_z]
         lr_patches[patch_index] = patch
-    
+
     # extract hr patches
     hr_patches = np.zeros((n_pairs, m, m, m, 6))
     for patch_index, indices in enumerate(indices_hr_features):
         s_x, e_x, s_y, e_y, s_z, e_z = indices
         patch = tensors_hr[s_x:e_x, s_y:e_y, s_z:e_z]
         hr_patches[patch_index] = patch
-    
+
     print("Saving patch pairs...")
     # save patches to a file
-    savez_compressed('patches.npz', patches_lr=lr_patches, patches_hr=hr_patches)
+    savez_compressed('patches.npz', patches_lr=lr_patches,
+                     patches_hr=hr_patches)
+
 
 compute_dti_respairs(dw_file, bvals_file, bvecs_file)
 compute_patchlib(input_radius, upsample_rate, datasample_rate)
