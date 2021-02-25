@@ -12,7 +12,7 @@ import dipy.reconst.dti as dti
 import gc
 
 # settings
-path = "data\\100307_3T_Diffusion_preproc\\100307\\T1w\\Diffusion\\"
+path = "data/100307_3T_Diffusion_preproc/100307/T1w/Diffusion/"
 dw_file = path + "data.nii.gz"
 bvals_file = path + "bvals"
 bvecs_file = path + "bvecs"
