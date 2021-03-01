@@ -56,7 +56,7 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     evals_hr = tenfit_hr.evals
     evecs_hr = tenfit_hr.evecs
     print("High resolutions tensors:", quadratic_tensors_hr.shape)
-    
+
     # save DTIs, eigenvectors, eigenvalues and masks to a file
     savez_compressed('tensors_hr.npz', tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
                      evals_hr=evals_hr, evecs_hr=evecs_hr)
@@ -81,6 +81,7 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     savez_compressed('tensors_lr.npz', tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr,
                      evals_lr=evals_lr, evecs_lr=evecs_lr)
     gc.collect()
+
 
 """
 Extracts patch-pairs from low/high resolution DTIs
@@ -148,14 +149,23 @@ def compute_patchlib(input_radius, upsample_rate, datasample_rate):
         s_x, e_x, s_y, e_y, s_z, e_z = indices
         patch = tensors_lr[s_x:e_x, s_y:e_y, s_z:e_z]
         lr_patches[patch_index] = patch
-
+    # flatten lr patches
+    s_lr = lr_patches.shape
+    vec_len_lr = 6 * lr_size ** 3 
+    lr_patches = np.reshape(lr_patches, (s_lr[0], vec_len_lr))
+    
+    
     # extract hr patches
     hr_patches = np.zeros((n_pairs, m, m, m, 6))
     for patch_index, indices in enumerate(indices_hr_features):
         s_x, e_x, s_y, e_y, s_z, e_z = indices
         patch = tensors_hr[s_x:e_x, s_y:e_y, s_z:e_z]
         hr_patches[patch_index] = patch
-
+    # flatten hr patches
+    s_hr = hr_patches.shape
+    vec_len_hr = 6 * m ** 3 
+    hr_patches = np.reshape(hr_patches, (s_hr[0], vec_len_hr))
+    
     print("Saving patch pairs...")
     # save patches to a file
     savez_compressed('patches.npz', patches_lr=lr_patches,
