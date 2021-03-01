@@ -1,6 +1,7 @@
 """A script that creates training data for IQT random forest
 training from a typical HCP dataset.
 """
+import platform
 import numpy as np
 from dipy.io.image import load_nifti
 from dipy.io.gradients import read_bvals_bvecs
@@ -12,7 +13,11 @@ import dipy.reconst.dti as dti
 import gc
 
 # settings
-path = "data\\100307_3T_Diffusion_preproc\\100307\\T1w\\Diffusion\\"
+# set path accordingly to the system
+if platform.system() == "Windows":
+    path = "data\\100307_3T_Diffusion_preproc\\100307\\T1w\\Diffusion\\"
+else:
+    path = "data/100307_3T_Diffusion_preproc/100307/T1w/Diffusion/"
 dw_file = path + "data.nii.gz"
 bvals_file = path + "bvals"
 bvecs_file = path + "bvecs"
@@ -157,6 +162,6 @@ def compute_patchlib(input_radius, upsample_rate, datasample_rate):
                      patches_hr=hr_patches)
 
 
-compute_dti_respairs(dw_file, bvals_file, bvecs_file)
+#compute_dti_respairs(dw_file, bvals_file, bvecs_file)
 compute_patchlib(input_radius, upsample_rate, datasample_rate)
 gc.collect()
