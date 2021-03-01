@@ -21,7 +21,7 @@ def train_regression_tree(patches_lr, patches_hr):
     return reg_tree.score(patches_lr, patches_hr)
 
 def train_random_forest(patches_lr, patches_hr):
-    ran_forest = RandomForestRegressor().fit(patches_lr, patches_hr)
+    ran_forest = RandomForestRegressor(n_estimators=10).fit(patches_lr, patches_hr)
     return ran_forest.score(patches_lr, patches_hr)
     
 patches_lr, patches_hr = load_training_data()
