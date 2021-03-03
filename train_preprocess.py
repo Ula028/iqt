@@ -8,22 +8,14 @@ from dipy.io.gradients import read_bvals_bvecs
 from dipy.core.gradients import gradient_table
 from dipy.segment.mask import median_otsu
 from dipy.align.reslice import reslice
-from numpy import savez_compressed
 import dipy.reconst.dti as dti
 import gc
 
 # settings
-# set path accordingly to the system
-if platform.system() == "Windows":
-    path = "data\\100307_3T_Diffusion_preproc\\100307\\T1w\\Diffusion\\"
-else:
-    path = "data/100307_3T_Diffusion_preproc/100307/T1w/Diffusion/"
-dw_file = path + "data.nii.gz"
-bvals_file = path + "bvals"
-bvecs_file = path + "bvecs"
-# not used (median_otsu used instead)
-mask_file = path + "nodif_brain_mask.nii.gz"
-grad_file = path + "grad_dev.nii.gz"
+dw_fname = "data.nii.gz"
+bvals_fname = "bvals"
+bvecs_fname = "bvecs"
+grad_file = "grad_dev.nii.gz"
 
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
@@ -31,24 +23,41 @@ input_radius = 2
 datasample_rate = 2  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
 no_rnds = 8  # no of separate training sets to be created
 
+
+"""
+Returns the path for diffusion data for a particular subject.
+"""
+def join_path(subject):
+    # set path according to the operating system
+    if platform.system() == "Windows":
+        path = "raw_data\\" + subject + "_3T_Diffusion_preproc\\" + subject + "\\T1w\\Diffusion\\"
+    else:
+        path = "raw_data/" + subject + "_3T_Diffusion_preproc/" + subject + "/T1w/Diffusion/"
+    return path
+    
 """
 Computes DTIs on the original DWIs and its downsampled version.
 As a result, we obtain high-res and low-res DTIs.
 """
-
-
-def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
+def compute_dti_respairs(subject):
+    print("\nSUBJECT:", subject)
+    # get paths
+    path = join_path(subject)
+    dw_file = path + dw_fname
+    bvals_file = path + bvals_fname
+    bvecs_file = path + bvecs_fname
+    
     # read in the DWI data
     data_hr, affine_hr, voxsize = load_nifti(dw_file, return_voxsize=True)
     # read bvals and bvecs text files
     bvals, bvecs = read_bvals_bvecs(bvals_file, bvecs_file)
     gtab = gradient_table(bvals, bvecs)
     # get the brain mask for high-res DWI
+    print("Computing brain mask...")
     maskdata_hr, mask_hr = median_otsu(data_hr, vol_idx=range(10, 50), median_radius=3,
                                        numpass=1, autocrop=False, dilate=2)
 
     # compute DTI for the original high-res DWI
-    gc.collect()
     tenmodel = dti.TensorModel(gtab)
     print("Fitting high resolution DTs...")
     tenfit_hr = tenmodel.fit(maskdata_hr)
@@ -58,7 +67,8 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     print("High resolutions tensors:", quadratic_tensors_hr.shape)
 
     # save DTIs, eigenvectors, eigenvalues and masks to a file
-    savez_compressed('tensors_hr.npz', tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
+    filename = "preprocessed_data/" + subject + "tensors_hr.npz"
+    np.savez_compressed(filename, tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
                      evals_hr=evals_hr, evecs_hr=evecs_hr)
 
     # downsample the DWI
@@ -68,7 +78,6 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     maskdata_lr, mask_lr = median_otsu(data_lr, vol_idx=range(10, 50), median_radius=3,
                                        numpass=1, autocrop=False, dilate=2)
     # compute DTI for the downsampled DWI
-    gc.collect()
     print("Fitting low resolution DTs...")
     tenfit_lr = tenmodel.fit(maskdata_lr)
     quadratic_tensors_lr = tenfit_lr.quadratic_form
@@ -77,10 +86,9 @@ def compute_dti_respairs(dw_file, bvals_file, bvecs_file):
     print("Low resolutions tensors:", quadratic_tensors_lr.shape)
 
     # save DTIs, eigenvectors, eigenvalues and masks to a file
-    # save DTIs, eigenvectors, eigenvalues and masks to a file
-    savez_compressed('tensors_lr.npz', tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr,
+    filename = "preprocessed_data/" + subject + "tensors_lr.npz"
+    np.savez_compressed(filename, tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr,
                      evals_lr=evals_lr, evecs_lr=evecs_lr)
-    gc.collect()
 
 
 """
@@ -90,11 +98,11 @@ in a large matrix.
 """
 
 
-def compute_patchlib(input_radius, upsample_rate, datasample_rate):
+def compute_patchlib(subject):
     n = input_radius
     m = upsample_rate
-    tensor_file_hr = np.load('tensors_hr.npz')
-    tensor_file_lr = np.load('tensors_lr.npz')
+    tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
+    tensor_file_lr = np.load("preprocessed_data/" + subject + "tensors_lr.npz")
     mask_lr = tensor_file_lr['mask_lr']
 
     print("Computing locations of valid patch pairs...")
@@ -153,7 +161,7 @@ def compute_patchlib(input_radius, upsample_rate, datasample_rate):
     s_lr = lr_patches.shape
     vec_len_lr = 6 * lr_size ** 3 
     lr_patches = np.reshape(lr_patches, (s_lr[0], vec_len_lr))
-    
+    print(lr_patches.shape)
     
     # extract hr patches
     hr_patches = np.zeros((n_pairs, m, m, m, 6))
@@ -165,13 +173,22 @@ def compute_patchlib(input_radius, upsample_rate, datasample_rate):
     s_hr = hr_patches.shape
     vec_len_hr = 6 * m ** 3 
     hr_patches = np.reshape(hr_patches, (s_hr[0], vec_len_hr))
+    print(hr_patches.shape)
+    
+    # keep a random sample
+    n_samples =  int(np.floor(s_lr[0] / datasample_rate))
+    sample = np.random.choice(range(s_lr[0]), size=n_samples, replace=False)
+    
+    lr_patches = lr_patches[sample, :]
+    hr_patches = hr_patches[sample, :]
     
     print("Saving patch pairs...")
     # save patches to a file
-    savez_compressed('patches.npz', patches_lr=lr_patches,
+    np.savez_compressed("preprocessed_data/" + subject + "patches.npz", patches_lr=lr_patches,
                      patches_hr=hr_patches)
 
-
-#compute_dti_respairs(dw_file, bvals_file, bvecs_file)
-compute_patchlib(input_radius, upsample_rate, datasample_rate)
-gc.collect()
+subjects = ["100307", "211417"]
+for subject in subjects: 
+    #compute_dti_respairs(subject)
+    compute_patchlib(subject)
+    gc.collect()
