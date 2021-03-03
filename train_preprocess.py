@@ -1,7 +1,6 @@
 """A script that creates training data for IQT random forest
 training from a typical HCP dataset.
 """
-import platform
 import numpy as np
 from dipy.io.image import load_nifti
 from dipy.io.gradients import read_bvals_bvecs
@@ -28,12 +27,7 @@ no_rnds = 8  # no of separate training sets to be created
 Returns the path for diffusion data for a particular subject.
 """
 def join_path(subject):
-    # set path according to the operating system
-    if platform.system() == "Windows":
-        path = "raw_data\\" + subject + "_3T_Diffusion_preproc\\" + subject + "\\T1w\\Diffusion\\"
-    else:
-        path = "raw_data/" + subject + "_3T_Diffusion_preproc/" + subject + "/T1w/Diffusion/"
-    return path
+    return "raw_data/" + subject + "_3T_Diffusion_preproc/" + subject + "/T1w/Diffusion/"
     
 """
 Computes DTIs on the original DWIs and its downsampled version.
@@ -189,6 +183,6 @@ def compute_patchlib(subject):
 
 subjects = ["100307", "211417"]
 for subject in subjects: 
-    #compute_dti_respairs(subject)
+    compute_dti_respairs(subject)
     compute_patchlib(subject)
     gc.collect()
