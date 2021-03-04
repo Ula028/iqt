@@ -92,97 +92,104 @@ in a large matrix.
 """
 
 
-def compute_patchlib(subject):
+def compute_patchlib(subjects):
     n = input_radius
     m = upsample_rate
-    tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
-    tensor_file_lr = np.load("preprocessed_data/" + subject + "tensors_lr.npz")
-    mask_lr = tensor_file_lr['mask_lr']
-
-    print("Computing locations of valid patch pairs...")
-
-    # list of central indices for lr
-    c_indices_lr_features = []
-
-    dims = mask_lr.shape
-    for x in range(n, dims[0] - n):
-        for y in range(n, dims[1] - n):
-            for z in range(n, dims[2] - n):
-
-                # save location if every corner of the cubic patch is contained within the brain
-                if mask_lr[x + n, y + n, z + n] and \
-                        mask_lr[x + n, y + n, z - n] and \
-                        mask_lr[x + n, y - n, z + n] and \
-                        mask_lr[x + n, y - n, z - n] and \
-                        mask_lr[x - n, y + n, z + n] and \
-                        mask_lr[x - n, y + n, z - n] and \
-                        mask_lr[x - n, y - n, z + n] and \
-                        mask_lr[x - n, y - n, z - n]:
-                    c_indices_lr_features.append((x, y, z))
-
-    # list of start and end indices for lr
-    indices_lr_features = [(x-n, x+n+1, y-n, y+n+1, z-n, z+n+1)
-                           for (x, y, z) in c_indices_lr_features]
-
-    # list of start and end indices for hr
-    indices_hr_features = [(x*n, x*n + m, y*n, y*n + m, z*n, z*n + m)
-                           for (x, y, z) in c_indices_lr_features]
-
-    n_pairs = len(indices_lr_features)
-    lr_size = 2*n + 1
-
-    print("Extracting patch pairs...")
-    tensors_hr = tensor_file_hr['tensors_hr']
-    tensors_lr = tensor_file_lr['tensors_lr']
-
-    # flatten DT matrices
-    s_hr = tensors_hr.shape
-    tensors_hr = np.reshape(tensors_hr, (s_hr[0], s_hr[1], s_hr[2], 9))
-    s_lr = tensors_lr.shape
-    tensors_lr = np.reshape(tensors_lr, (s_lr[0], s_lr[1], s_lr[2], 9))
-
-    # remove duplicate entries to obtain the 6 unique parameters
-    tensors_hr = np.delete(tensors_hr, [3, 6, 7], axis=3)
-    tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
-
-    # extract lr patches
-    lr_patches = np.zeros((n_pairs, lr_size, lr_size, lr_size, 6))
-    for patch_index, indices in enumerate(indices_lr_features):
-        s_x, e_x, s_y, e_y, s_z, e_z = indices
-        patch = tensors_lr[s_x:e_x, s_y:e_y, s_z:e_z]
-        lr_patches[patch_index] = patch
-    # flatten lr patches
-    s_lr = lr_patches.shape
-    vec_len_lr = 6 * lr_size ** 3 
-    lr_patches = np.reshape(lr_patches, (s_lr[0], vec_len_lr))
-    print(lr_patches.shape)
     
-    # extract hr patches
-    hr_patches = np.zeros((n_pairs, m, m, m, 6))
-    for patch_index, indices in enumerate(indices_hr_features):
-        s_x, e_x, s_y, e_y, s_z, e_z = indices
-        patch = tensors_hr[s_x:e_x, s_y:e_y, s_z:e_z]
-        hr_patches[patch_index] = patch
-    # flatten hr patches
-    s_hr = hr_patches.shape
-    vec_len_hr = 6 * m ** 3 
-    hr_patches = np.reshape(hr_patches, (s_hr[0], vec_len_hr))
-    print(hr_patches.shape)
+    for subject in subjects:
+        tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
+        tensor_file_lr = np.load("preprocessed_data/" + subject + "tensors_lr.npz")
+        mask_lr = tensor_file_lr['mask_lr']
+
+        print("Computing locations of valid patch pairs...")
+
+        # list of central indices for lr
+        c_indices_lr_features = []
+
+        dims = mask_lr.shape
+        for x in range(n, dims[0] - n):
+            for y in range(n, dims[1] - n):
+                for z in range(n, dims[2] - n):
+
+                    # save location if every corner of the cubic patch is contained within the brain
+                    if mask_lr[x + n, y + n, z + n] and \
+                            mask_lr[x + n, y + n, z - n] and \
+                            mask_lr[x + n, y - n, z + n] and \
+                            mask_lr[x + n, y - n, z - n] and \
+                            mask_lr[x - n, y + n, z + n] and \
+                            mask_lr[x - n, y + n, z - n] and \
+                            mask_lr[x - n, y - n, z + n] and \
+                            mask_lr[x - n, y - n, z - n]:
+                        c_indices_lr_features.append((x, y, z))
+
+        # list of start and end indices for lr
+        indices_lr_features = [(x-n, x+n+1, y-n, y+n+1, z-n, z+n+1)
+                            for (x, y, z) in c_indices_lr_features]
+
+        # list of start and end indices for hr
+        indices_hr_features = [(x*n, x*n + m, y*n, y*n + m, z*n, z*n + m)
+                            for (x, y, z) in c_indices_lr_features]
+
+        n_pairs = len(indices_lr_features)
+        lr_size = 2*n + 1
+
+        print("Extracting patch pairs...")
+        tensors_hr = tensor_file_hr['tensors_hr']
+        tensors_lr = tensor_file_lr['tensors_lr']
+
+        # flatten DT matrices
+        s_hr = tensors_hr.shape
+        tensors_hr = np.reshape(tensors_hr, (s_hr[0], s_hr[1], s_hr[2], 9))
+        s_lr = tensors_lr.shape
+        tensors_lr = np.reshape(tensors_lr, (s_lr[0], s_lr[1], s_lr[2], 9))
+
+        # remove duplicate entries to obtain the 6 unique parameters
+        tensors_hr = np.delete(tensors_hr, [3, 6, 7], axis=3)
+        tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
+
+        # extract lr patches
+        lr_patches = np.zeros((n_pairs, lr_size, lr_size, lr_size, 6))
+        for patch_index, indices in enumerate(indices_lr_features):
+            s_x, e_x, s_y, e_y, s_z, e_z = indices
+            patch = tensors_lr[s_x:e_x, s_y:e_y, s_z:e_z]
+            lr_patches[patch_index] = patch
+        # flatten lr patches
+        s_lr = lr_patches.shape
+        vec_len_lr = 6 * lr_size ** 3 
+        lr_patches = np.reshape(lr_patches, (s_lr[0], vec_len_lr))
+        print(lr_patches.shape)
+        
+        # extract hr patches
+        hr_patches = np.zeros((n_pairs, m, m, m, 6))
+        for patch_index, indices in enumerate(indices_hr_features):
+            s_x, e_x, s_y, e_y, s_z, e_z = indices
+            patch = tensors_hr[s_x:e_x, s_y:e_y, s_z:e_z]
+            hr_patches[patch_index] = patch
+        # flatten hr patches
+        s_hr = hr_patches.shape
+        vec_len_hr = 6 * m ** 3 
+        hr_patches = np.reshape(hr_patches, (s_hr[0], vec_len_hr))
+        print(hr_patches.shape)
+        
+        # keep a random sample
+        n_samples =  int(np.floor(s_lr[0] / datasample_rate))
+        sample = np.random.choice(range(s_lr[0]), size=n_samples, replace=False)
+        
+        lr_patches = lr_patches[sample, :]
+        hr_patches = hr_patches[sample, :]
     
-    # keep a random sample
-    n_samples =  int(np.floor(s_lr[0] / datasample_rate))
-    sample = np.random.choice(range(s_lr[0]), size=n_samples, replace=False)
-    
-    lr_patches = lr_patches[sample, :]
-    hr_patches = hr_patches[sample, :]
-    
+
     print("Saving patch pairs...")
     # save patches to a file
     np.savez_compressed("preprocessed_data/" + subject + "patches.npz", patches_lr=lr_patches,
                      patches_hr=hr_patches)
 
-subjects = ["100307", "211417"]
-for subject in subjects: 
+subjects_train = ["115724"] #, "688569", "137431", "757764", "206828", "145632", "516742", "211417"]
+
+
+for subject in subjects_train: 
     compute_dti_respairs(subject)
-    compute_patchlib(subject)
     gc.collect()
+
+compute_patchlib(subjects_train)
+gc.collect()

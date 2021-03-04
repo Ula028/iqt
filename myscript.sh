@@ -3,7 +3,7 @@
 #$ -l rmem=32G
 # Request 8 processor cores
 #$ -pe smp 8
-# Email notifications to me@somedomain.com
+# Email notifications
 #$ -M utalalaj1@sheffield.ac.uk
 # Email notifications if the job aborts
 #$ -m ea

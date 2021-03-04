@@ -7,7 +7,7 @@ from sklearn import tree
 from sklearn.ensemble import RandomForestRegressor
 
 def load_training_data():
-    dict_data = np.load('patches.npz')
+    dict_data = np.load('preprocessed_data/patches.npz')
     patches_lr = dict_data['patches_lr']
     patches_hr = dict_data['patches_hr']
     return patches_lr, patches_hr
