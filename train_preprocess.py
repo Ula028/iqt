@@ -26,13 +26,18 @@ no_rnds = 8  # no of separate training sets to be created
 """
 Returns the path for diffusion data for a particular subject.
 """
+
+
 def join_path(subject):
     return "raw_data/" + subject + "_3T_Diffusion_preproc/" + subject + "/T1w/Diffusion/"
-    
+
+
 """
 Computes DTIs on the original DWIs and its downsampled version.
 As a result, we obtain high-res and low-res DTIs.
 """
+
+
 def compute_dti_respairs(subject):
     print("\nSUBJECT:", subject)
     # get paths
@@ -40,7 +45,7 @@ def compute_dti_respairs(subject):
     dw_file = path + dw_fname
     bvals_file = path + bvals_fname
     bvecs_file = path + bvecs_fname
-    
+
     # read in the DWI data
     data_hr, affine_hr, voxsize = load_nifti(dw_file, return_voxsize=True)
     # read bvals and bvecs text files
@@ -63,7 +68,7 @@ def compute_dti_respairs(subject):
     # save DTIs, eigenvectors, eigenvalues and masks to a file
     filename = "preprocessed_data/" + subject + "tensors_hr.npz"
     np.savez_compressed(filename, tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
-                     evals_hr=evals_hr, evecs_hr=evecs_hr)
+                        evals_hr=evals_hr, evecs_hr=evecs_hr)
 
     # downsample the DWI
     data_lr, affine_lr = reslice(data_hr, affine_hr, voxsize, [
@@ -82,7 +87,7 @@ def compute_dti_respairs(subject):
     # save DTIs, eigenvectors, eigenvalues and masks to a file
     filename = "preprocessed_data/" + subject + "tensors_lr.npz"
     np.savez_compressed(filename, tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr,
-                     evals_lr=evals_lr, evecs_lr=evecs_lr)
+                        evals_lr=evals_lr, evecs_lr=evecs_lr)
 
 
 """
@@ -95,10 +100,12 @@ in a large matrix.
 def compute_patchlib(subjects):
     n = input_radius
     m = upsample_rate
-    
+
     for subject in subjects:
-        tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
-        tensor_file_lr = np.load("preprocessed_data/" + subject + "tensors_lr.npz")
+        tensor_file_hr = np.load(
+            "preprocessed_data/" + subject + "tensors_hr.npz")
+        tensor_file_lr = np.load(
+            "preprocessed_data/" + subject + "tensors_lr.npz")
         mask_lr = tensor_file_lr['mask_lr']
 
         print("Computing locations of valid patch pairs...")
@@ -124,11 +131,11 @@ def compute_patchlib(subjects):
 
         # list of start and end indices for lr
         indices_lr_features = [(x-n, x+n+1, y-n, y+n+1, z-n, z+n+1)
-                            for (x, y, z) in c_indices_lr_features]
+                               for (x, y, z) in c_indices_lr_features]
 
         # list of start and end indices for hr
         indices_hr_features = [(x*n, x*n + m, y*n, y*n + m, z*n, z*n + m)
-                            for (x, y, z) in c_indices_lr_features]
+                               for (x, y, z) in c_indices_lr_features]
 
         n_pairs = len(indices_lr_features)
         lr_size = 2*n + 1
@@ -155,10 +162,10 @@ def compute_patchlib(subjects):
             lr_patches[patch_index] = patch
         # flatten lr patches
         s_lr = lr_patches.shape
-        vec_len_lr = 6 * lr_size ** 3 
+        vec_len_lr = 6 * lr_size ** 3
         lr_patches = np.reshape(lr_patches, (s_lr[0], vec_len_lr))
         print(lr_patches.shape)
-        
+
         # extract hr patches
         hr_patches = np.zeros((n_pairs, m, m, m, 6))
         for patch_index, indices in enumerate(indices_hr_features):
@@ -167,27 +174,57 @@ def compute_patchlib(subjects):
             hr_patches[patch_index] = patch
         # flatten hr patches
         s_hr = hr_patches.shape
-        vec_len_hr = 6 * m ** 3 
+        vec_len_hr = 6 * m ** 3
         hr_patches = np.reshape(hr_patches, (s_hr[0], vec_len_hr))
         print(hr_patches.shape)
-        
+
         # keep a random sample
-        n_samples =  int(np.floor(s_lr[0] / datasample_rate))
-        sample = np.random.choice(range(s_lr[0]), size=n_samples, replace=False)
-        
+        n_samples = int(np.floor(s_lr[0] / datasample_rate))
+        sample = np.random.choice(
+            range(s_lr[0]), size=n_samples, replace=False)
+
         lr_patches = lr_patches[sample, :]
         hr_patches = hr_patches[sample, :]
-    
 
     print("Saving patch pairs...")
     # save patches to a file
     np.savez_compressed("preprocessed_data/" + subject + "patches.npz", patches_lr=lr_patches,
-                     patches_hr=hr_patches)
-
-subjects_train = ["115724"] #, "688569", "137431", "757764", "206828", "145632", "516742", "211417"]
+                        patches_hr=hr_patches)
 
 
-for subject in subjects_train: 
+"""
+Combines patch-pairs from multiple subjects to create a dataset
+"""
+
+
+def create_dataset(subjects, name):
+
+    all_patches_lr = np.array()
+    all_patches_hr = np.array()
+
+    for subject in subjects:
+
+        # get patches for this subject
+        dict_data = np.load("preprocessed_data/" + subject + "patches.npz")
+        patches_lr = dict_data['patches_lr']
+        patches_hr = dict_data['patches_hr']
+
+        # append to the dataset
+        all_patches_lr = np.append(all_patches_lr, patches_lr)
+        all_patches_hr = np.append(all_patches_hr, patches_hr)
+    
+    print("Saving the dataset...")
+    # save dataset to a file
+    np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=all_patches_lr,
+                        patches_hr=all_patches_hr)
+
+
+# "115724", "688569", "137431", "757764", "206828", "145632", "516742", "211417"]
+# uploaded: 206828, 180230, 175136, 145632
+subjects_train = ["103212", "115724", "137431", "145632", "175136", "180230", "206828"]
+
+
+for subject in subjects_train:
     compute_dti_respairs(subject)
     gc.collect()
 
