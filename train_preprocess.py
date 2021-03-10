@@ -102,6 +102,8 @@ def compute_patchlib(subjects):
     m = upsample_rate
 
     for subject in subjects:
+        print("\nSUBJECT:", subject)
+        
         tensor_file_hr = np.load(
             "preprocessed_data/" + subject + "tensors_hr.npz")
         tensor_file_lr = np.load(
@@ -219,9 +221,8 @@ def create_dataset(subjects, name):
                         patches_hr=all_patches_hr)
 
 
-# "115724", "688569", "137431", "757764", "206828", "145632", "516742", "211417"]
-# uploaded: 206828, 180230, 175136, 145632
-subjects_train = ["175136", "180230", "206828", "211417", "468050"]
+
+subjects_train = ["516742", "688569", "757764", "792867"]
 
 
 for subject in subjects_train:
