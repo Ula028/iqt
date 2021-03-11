@@ -222,7 +222,7 @@ def create_dataset(subjects, name):
 
 
 
-subjects_train = ["516742", "688569", "757764", "792867"]
+subjects_train = ["886674", "902242", "962058"]
 
 
 for subject in subjects_train:
