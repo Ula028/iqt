@@ -224,13 +224,6 @@ def create_dataset(subjects, name):
 subjects_train = ["115724", "688569", "137431", "757764", "206828", "145632", "516742", "211417"]
 subjects_test = ["175136", "180230", "468050", "902242", "886674", "962058", "103212", "792867"]
 
-
-for subject in subjects_train:
-    compute_patchlib(subject)
-
-for subject in subjects_test:
-    compute_patchlib(subject)
-
 create_dataset(subjects_train, "train_data")
 create_dataset(subjects_train, "test_data")
 gc.collect()
