@@ -200,10 +200,11 @@ Combines patch-pairs from multiple subjects to create a dataset
 
 def create_dataset(subjects, name):
 
-    all_patches_lr = np.array([])
-    all_patches_hr = np.array([])
+    dict0 = np.load("preprocessed_data/" + subjects[0] + "patches.npz")
+    all_patches_lr = dict0['patches_lr']
+    all_patches_hr = dict0['patches_hr']
 
-    for subject in subjects:
+    for subject in subjects[1:]:
 
         # get patches for this subject
         dict_data = np.load("preprocessed_data/" + subject + "patches.npz")
@@ -211,11 +212,13 @@ def create_dataset(subjects, name):
         patches_hr = dict_data['patches_hr']
 
         # append to the dataset
-        all_patches_lr = np.append(all_patches_lr, patches_lr)
-        all_patches_hr = np.append(all_patches_hr, patches_hr)
+        all_patches_lr = np.append(all_patches_lr, patches_lr, axis=0)
+        all_patches_hr = np.append(all_patches_hr, patches_hr, axis=0)
     
-    print("Saving the dataset...")
+    print("Saving the " + name + " dataset...")
     # save dataset to a file
+    print(all_patches_hr.shape)
+    print(all_patches_lr.shape)
     np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=all_patches_lr,
                         patches_hr=all_patches_hr)
 
