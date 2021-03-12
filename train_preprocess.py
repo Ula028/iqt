@@ -200,8 +200,8 @@ Combines patch-pairs from multiple subjects to create a dataset
 
 def create_dataset(subjects, name):
 
-    all_patches_lr = np.array()
-    all_patches_hr = np.array()
+    all_patches_lr = np.array([])
+    all_patches_hr = np.array([])
 
     for subject in subjects:
 
