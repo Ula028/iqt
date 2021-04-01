@@ -1,4 +1,5 @@
 import numpy as np
+import utils
 import pickle
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
@@ -18,13 +19,19 @@ def load_subject_data(subject):
 
 def preprocess_data(tensors_lr):
     n = input_radius
+    m = upsample_rate
 
     # flatten DT matrices
     s = tensors_lr.shape
     tensors_lr = np.reshape(tensors_lr, (s[0], s[1], s[2], 9))
+    
+    # calulate the target resolution after upsampling
+    target_resolution = (s[0]*m, s[1]*m, s[2]*m, 6)
 
     # remove duplicate entries to obtain the 6 unique parameters
     tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
+    
+    all_indices = utils.create_triples(s[0], s[1], s[2])
     
     # list of central indices for lr patches
     c_indices_lr = []
@@ -48,13 +55,38 @@ def preprocess_data(tensors_lr):
         s_x, e_x, s_y, e_y, s_z, e_z = indices
         patch = tensors_lr[s_x:e_x, s_y:e_y, s_z:e_z]
         lr_patches[patch_index] = patch
+    
     # flatten lr patches
-    s_lr = lr_patches.shape
     vec_len_lr = 6 * lr_size ** 3
-    lr_patches = np.reshape(lr_patches, (s_lr[0], vec_len_lr))
+    lr_patches = np.reshape(lr_patches, (n_patches, vec_len_lr))
     print(lr_patches.shape)
     
+    return all_indices, c_indices_lr, lr_patches, target_resolution
     
+def reconstruct(all_indices, c_indices_lr, patches_lr, mask_lr, target_res):
+    n = input_radius
+    m = upsample_rate
+    predictions = []
+    # iterate over the low quality image
+    for patch, index in zip(patches_lr, all_indices):
+        # use the train model if patch contained in the brain
+        if index in c_indices_lr and utils.contained_in_brain(index, n, mask_lr):
+            prediction = model.predict(patch.reshape(1, -1))
+        # otherwise use the conditional mean
+        else:
+            # use duplicated central patch for now
+            center = np.reshape(patch, (2*n + 1, 2*n + 1, 2*n + 1, 6))[n+1, n+1, n+1]
+            copied = np.repeat(center, m * m * m)
+            prediction = np.reshape(copied, (1, 48))
+        predictions.append(prediction)
+    
+    reconstructed_img = np.reshape(predictions, target_res)
+    reconstructed_img = np.apply_along_axis(utils.restore_duplicates, axis=3, arr=reconstructed_img)
+    # reshape the last dimension into diffusion tensors
+    reconstructed_img = np.reshape(reconstructed_img, target_res[0], target_res[1], target_res[2], 3, 3)
+    
+    return reconstructed_img
+
 
 def load_linear_model():
     with open('linear_model.pickle', 'rb') as handle:
@@ -64,7 +96,9 @@ def load_linear_model():
 
 model = load_linear_model()
 tensors_lr, mask_lr, tensors_hr = load_subject_data("962058")
-patches_lr = preprocess_data(tensors_lr)
-prediction = model.predict(patches_lr)
-rmse = mean_squared_error(tensors_hr, prediction, squared=False)
-print("Score:", rmse)
+all_indices, c_indices_lr, lr_patches, target_resolution = preprocess_data(tensors_lr)
+reconstruction = reconstruct(all_indices, c_indices_lr, lr_patches, mask_lr, target_resolution)
+print(reconstruction.shape)
+print(tensors_hr.shape)
+#rmse = mean_squared_error(tensors_hr, prediction, squared=False)
+#print("Score:", rmse)

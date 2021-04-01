@@ -2,6 +2,7 @@
 training from a typical HCP dataset.
 """
 import numpy as np
+import utils
 from dipy.io.image import load_nifti
 from dipy.io.gradients import read_bvals_bvecs
 from dipy.core.gradients import gradient_table
@@ -23,15 +24,6 @@ no_rnds = 8  # no of separate training sets to be created
 
 
 """
-Returns the path for diffusion data for a particular subject.
-"""
-
-
-def join_path(subject):
-    return "raw_data/" + subject + "_3T_Diffusion_preproc/" + subject + "/T1w/Diffusion/"
-
-
-"""
 Computes DTIs on the original DWIs and its downsampled version.
 As a result, we obtain high-res and low-res DTIs.
 """
@@ -40,7 +32,7 @@ As a result, we obtain high-res and low-res DTIs.
 def compute_dti_respairs(subject):
     print("\nSUBJECT:", subject)
     # get paths
-    path = join_path(subject)
+    path = utils.join_path(subject)
     dw_file = path + dw_fname
     bvals_file = path + bvals_fname
     bvecs_file = path + bvecs_fname
@@ -118,15 +110,8 @@ def compute_patchlib(subject):
         for y in range(n, dims[1] - n):
             for z in range(n, dims[2] - n):
 
-                # save location if every corner of the cubic patch is contained within the brain
-                if mask_lr[x + n, y + n, z + n] and \
-                        mask_lr[x + n, y + n, z - n] and \
-                        mask_lr[x + n, y - n, z + n] and \
-                        mask_lr[x + n, y - n, z - n] and \
-                        mask_lr[x - n, y + n, z + n] and \
-                        mask_lr[x - n, y + n, z - n] and \
-                        mask_lr[x - n, y - n, z + n] and \
-                        mask_lr[x - n, y - n, z - n]:
+                # save location if the cubic patch is contained within the brain
+                if utils.contained_in_brain((x, y, z), n, mask_lr):
                     c_indices_lr_features.append((x, y, z))
 
     # list of start and end indices for lr
@@ -161,9 +146,8 @@ def compute_patchlib(subject):
         patch = tensors_lr[s_x:e_x, s_y:e_y, s_z:e_z]
         lr_patches[patch_index] = patch
     # flatten lr patches
-    s_lr = lr_patches.shape
     vec_len_lr = 6 * lr_size ** 3
-    lr_patches = np.reshape(lr_patches, (s_lr[0], vec_len_lr))
+    lr_patches = np.reshape(lr_patches, (n_pairs, vec_len_lr))
     print(lr_patches.shape)
 
     # extract hr patches
