@@ -8,6 +8,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 import pickle
 
+
 def load_training_data():
     dict_data = np.load('preprocessed_data/train_data.npz')
     patches_lr = dict_data['patches_lr']
@@ -15,6 +16,7 @@ def load_training_data():
     print("Train patches_lr shape:", patches_lr.shape)
     print("Train patches_hr shape:", patches_hr.shape)
     return patches_lr, patches_hr
+
 
 def load_testing_data():
     dict_data = np.load('preprocessed_data/test_data.npz')

@@ -18,18 +18,20 @@ bvecs_fname = "bvecs"
 grad_file = "grad_dev.nii.gz"
 
 upsample_rate = 2  # the super-resolution factor (m in paper)
-input_radius = 2 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
+# the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
+input_radius = 2
 datasample_rate = 2  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
 no_rnds = 8  # no of separate training sets to be created
 
 
-"""
-Computes DTIs on the original DWIs and its downsampled version.
-As a result, we obtain high-res and low-res DTIs.
-"""
-
-
 def compute_dti_respairs(subject):
+    """ Computes DTIs on the original DWIs and its downsampled version and saves them to a file.
+        As a result, we obtain high-res and low-res DTIs.
+
+    Args:
+        subject (string): subject id
+    """
+
     print("\nSUBJECT:", subject)
     # get paths
     path = utils.join_path(subject)
@@ -81,19 +83,19 @@ def compute_dti_respairs(subject):
                         evals_lr=evals_lr, evecs_lr=evecs_lr)
 
 
-"""
-Extracts patch-pairs from low/high resolution DTIs
-to create an exhaustive list of all valid patch-pairs and stores them
-in a large matrix.
-"""
-
-
 def compute_patchlib(subject):
+    """ Extracts patch-pairs from low/high resolution DTIs
+        to create an exhaustive list of all valid patch-pairs, stores them
+        in a large matrix and saves it to a file.
+
+    Args:
+        subject (string): subject id
+    """
     n = input_radius
     m = upsample_rate
 
     print("\nSUBJECT:", subject)
-    
+
     tensor_file_hr = np.load(
         "preprocessed_data/" + subject + "tensors_hr.npz")
     tensor_file_lr = np.load(
@@ -116,11 +118,11 @@ def compute_patchlib(subject):
 
     # list of start and end indices for lr
     indices_lr_features = [(x-n, x+n+1, y-n, y+n+1, z-n, z+n+1)
-                            for (x, y, z) in c_indices_lr_features]
+                           for (x, y, z) in c_indices_lr_features]
 
     # list of start and end indices for hr
     indices_hr_features = [(x*n, x*n + m, y*n, y*n + m, z*n, z*n + m)
-                            for (x, y, z) in c_indices_lr_features]
+                           for (x, y, z) in c_indices_lr_features]
 
     n_pairs = len(indices_lr_features)
     lr_size = 2*n + 1
@@ -176,12 +178,14 @@ def compute_patchlib(subject):
                         patches_hr=hr_patches)
 
 
-"""
-Combines patch-pairs from multiple subjects to create a dataset
-"""
-
-
 def create_dataset(subjects, name):
+    """ Combines patch-pairs from multiple subjects to create a dataset
+        and saves it to a file.
+
+    Args:
+        subjects ([string]): array of subject ids
+        name (string): name of the file in which the dataset is to be saved
+    """
     print("Creating " + name)
 
     dict0 = np.load("preprocessed_data/" + subjects[0] + "patches.npz")
@@ -199,7 +203,7 @@ def create_dataset(subjects, name):
         # append to the dataset
         all_patches_lr = np.append(all_patches_lr, patches_lr, axis=0)
         all_patches_hr = np.append(all_patches_hr, patches_hr, axis=0)
-    
+
     print("Saving the " + name + " dataset...")
     # save dataset to a file
     print(all_patches_hr.shape)
@@ -208,9 +212,10 @@ def create_dataset(subjects, name):
                         patches_hr=all_patches_hr)
 
 
-
-subjects_train = ["115724", "688569", "137431", "757764", "206828", "145632", "516742", "211417"]
-subjects_test = ["175136", "180230", "468050", "902242", "886674", "962058", "103212", "792867"]
+subjects_train = ["115724", "688569", "137431",
+                  "757764", "206828", "145632", "516742", "211417"]
+subjects_test = ["175136", "180230", "468050",
+                 "902242", "886674", "962058", "103212", "792867"]
 
 create_dataset(subjects_train, "train_data")
 create_dataset(subjects_test, "test_data")

@@ -42,7 +42,14 @@ def contained_in_brain(index, radius, mask):
         return False
 
 def restore_duplicates(tensor):
-    print(tensor.shape)
+    """Creates a flattened diffusion tensor from 6 unique diffusion parameters
+
+    Args:
+        tensor ([double]): array containing 6 diffusion parameters
+
+    Returns:
+        [double]: a flattened diffusion tensor with 9 elements
+    """
     d_yx = tensor[1]
     d_zx = tensor[2]
     d_zy = tensor[4]
@@ -50,10 +57,19 @@ def restore_duplicates(tensor):
     tensor = np.insert(tensor, 5, d_zx)
     tensor = np.insert(tensor, 3, d_zy)
     
-    print(tensor.shape)
     return tensor
 
 def create_triples(x_max, y_max, z_max):
+    """Generate all possible coordinates in a given 3D space starting from 0
+
+    Args:
+        x_max (int): maximum x coordinate
+        y_max (int): maximum y coordinate
+        z_max (int): maximum z coordinate
+
+    Returns:
+        [(int, int, int)]: list of triples
+    """
     triples = []
     for x in range(0, x_max):
         for y in range(0, y_max):
