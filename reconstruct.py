@@ -115,3 +115,7 @@ print(reconstructed_tensors.shape)
 print(tensors_hr.shape)
 rmse = mean_squared_error(tensors_hr, reconstructed_tensors, squared=False)
 print("Score:", rmse)
+
+# save the image
+with open('reconstructed_tensors.pickle', 'wb') as handle:
+    pickle.dump(reconstructed_tensors, handle)
