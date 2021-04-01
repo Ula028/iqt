@@ -198,12 +198,14 @@ Combines patch-pairs from multiple subjects to create a dataset
 
 
 def create_dataset(subjects, name):
+    print("Creating " + name)
 
     dict0 = np.load("preprocessed_data/" + subjects[0] + "patches.npz")
     all_patches_lr = dict0['patches_lr']
     all_patches_hr = dict0['patches_hr']
 
     for subject in subjects[1:]:
+        print(subject)
 
         # get patches for this subject
         dict_data = np.load("preprocessed_data/" + subject + "patches.npz")
