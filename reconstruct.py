@@ -68,6 +68,7 @@ def reconstruct(all_indices, c_indices_lr, patches_lr, mask_lr, target_res):
     m = upsample_rate
     predictions = []
     # iterate over the low quality image
+    print("Reconstructing high quality image...")
     for patch, index in zip(patches_lr, all_indices):
         # use the train model if patch contained in the brain
         if index in c_indices_lr and utils.contained_in_brain(index, n, mask_lr):
@@ -100,5 +101,5 @@ all_indices, c_indices_lr, lr_patches, target_resolution = preprocess_data(tenso
 reconstruction = reconstruct(all_indices, c_indices_lr, lr_patches, mask_lr, target_resolution)
 print(reconstruction.shape)
 print(tensors_hr.shape)
-#rmse = mean_squared_error(tensors_hr, prediction, squared=False)
-#print("Score:", rmse)
+rmse = mean_squared_error(tensors_hr, reconstruction, squared=False)
+print("Score:", rmse)
