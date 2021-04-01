@@ -92,9 +92,6 @@ def reconstruct(all_indices, c_indices_lr, tensors_lr, mask_lr, target_res):
     reconstructed_img = np.reshape(predictions, target_res)
     reconstructed_img = np.apply_along_axis(
         utils.restore_duplicates, axis=3, arr=reconstructed_img)
-    # reshape the last dimension into diffusion tensors
-    reconstructed_img = np.reshape(
-        reconstructed_img, (target_res[0], target_res[1], target_res[2], 3, 3))
 
     return reconstructed_img
 
@@ -121,7 +118,7 @@ new_size = reconstructed_tensors.shape
 if new_size != tensors_hr.shape:
     tensors_hr = tensors_hr[:new_size[0], :new_size[1], :new_size[2]]
         
-rmse = mean_squared_error(tensors_hr, reconstructed_tensors, squared=False)
+rmse = mean_squared_error(tensors_hr.flatten(), reconstructed_tensors.flatten(), squared=False)
 print("Score:", rmse)
 
 # save the image

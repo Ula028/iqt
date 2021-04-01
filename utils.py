@@ -53,11 +53,11 @@ def restore_duplicates(tensor):
     d_yx = tensor[1]
     d_zx = tensor[2]
     d_zy = tensor[4]
-    tensor = np.insert(tensor, 5, d_yx)
-    tensor = np.insert(tensor, 5, d_zx)
-    tensor = np.insert(tensor, 3, d_zy)
+    new_tensor = np.array([[tensor[0], tensor[1], tensor[2]],
+                  [d_yx, tensor[3], tensor[4]],
+                  [d_zx, d_zy, tensor[5]]])
     
-    return tensor
+    return new_tensor
 
 def create_triples(x_max, y_max, z_max):
     """Generate all possible coordinates in a given 3D space starting from 0
