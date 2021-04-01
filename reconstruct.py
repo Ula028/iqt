@@ -109,10 +109,18 @@ model = load_linear_model()
 tensors_lr, mask_lr, tensors_hr = load_subject_data("962058")
 all_indices, c_indices_lr, lr_patches, target_resolution = preprocess_data(
     tensors_lr)
+
 reconstructed_tensors = reconstruct(
     all_indices, c_indices_lr, lr_patches, mask_lr, target_resolution)
+
 print(reconstructed_tensors.shape)
 print(tensors_hr.shape)
+
+# cast to common size if sizes different
+new_size = reconstructed_tensors.shape
+if new_size != tensors_hr.shape:
+    tensors_hr = tensors_hr[:new_size[0], :new_size[1], :new_size[2]]
+        
 rmse = mean_squared_error(tensors_hr, reconstructed_tensors, squared=False)
 print("Score:", rmse)
 
