@@ -47,8 +47,8 @@ def preprocess_data(tensors_lr):
     s = tensors_lr.shape
     tensors_lr = np.reshape(tensors_lr, (s[0], s[1], s[2], 9))
 
-    # calulate the target resolution after upsampling
-    target_resolution = (s[0]*m, s[1]*m, s[2]*m, 6)
+    # the target resolution after upsampling
+    target_resolution = (s[0]*m, s[1]*m, s[2]*m, 3, 3)
 
     # remove duplicate entries to obtain the 6 unique parameters
     tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
@@ -68,10 +68,10 @@ def preprocess_data(tensors_lr):
     return all_indices, c_indices_lr, tensors_lr, target_resolution
 
 
-def reconstruct(all_indices, c_indices_lr, tensors_lr, mask_lr, target_res):
+def reconstruct(all_indices, c_indices_lr, tensors_lr, mask_lr, target_res, model):
     n = input_radius
     m = upsample_rate
-    predictions = []
+    all_predictions = np.zeros(target_res)
     # iterate over the low quality image
     print("Reconstructing high quality image...")
     for index in tqdm(all_indices):
@@ -86,14 +86,22 @@ def reconstruct(all_indices, c_indices_lr, tensors_lr, mask_lr, target_res):
             # use duplicated central patch for now
             patch = tensors_lr[x, y, z]
             copied = np.repeat(patch, m * m * m)
-            prediction = np.reshape(copied, (1, 48))
-        predictions.append(prediction)
+            prediction = np.reshape(copied, (1, 6 * m**3))
+        
+        prediction = np.reshape(prediction, (m, m, m, 6))
+        
+        for xc, plane in enumerate(prediction):
+            for yc, row in enumerate(plane):
+                for zc, voxel in enumerate(row):
+                    voxel = utils.restore_duplicates(voxel)
+                    all_predictions[m * x + xc, m * y + yc, m * z + zc] = voxel
+        
+    
+    print("Predictions shape:", all_predictions.shape)
+    print("Target shape:", target_res)
+    image = np.reshape(all_predictions, target_res)
 
-    reconstructed_img = np.reshape(predictions, target_res)
-    reconstructed_img = np.apply_along_axis(
-        utils.restore_duplicates, axis=3, arr=reconstructed_img)
-
-    return reconstructed_img
+    return image
 
 
 def load_linear_model():
@@ -101,17 +109,32 @@ def load_linear_model():
         lin_reg = pickle.load(handle)
     return lin_reg
 
-
+# load the model
 model = load_linear_model()
+
+# load and preprocess subject data
 tensors_lr, mask_lr, tensors_hr = load_subject_data("962058")
 all_indices, c_indices_lr, lr_patches, target_resolution = preprocess_data(
     tensors_lr)
 
+# reconstruct the diffusion tensors
 reconstructed_tensors = reconstruct(
-    all_indices, c_indices_lr, lr_patches, mask_lr, target_resolution)
+    all_indices, c_indices_lr, lr_patches, mask_lr, target_resolution, model)
 
 print(reconstructed_tensors.shape)
 print(tensors_hr.shape)
+
+# save the image
+with open('reconstructed_tensors.pickle', 'wb') as handle:
+    pickle.dump(reconstructed_tensors, handle)
+
+# load previously fitted DTIs
+tensor_file_hr = np.load("preprocessed_data/" + "962058" + "tensors_hr.npz")
+tensors_hr = tensor_file_hr['tensors_hr']
+
+# load reconstructed DTIs
+with open('reconstructed_tensors.pickle', 'rb') as handle:
+    reconstructed_tensors = pickle.load(handle)
 
 # cast to common size if sizes different
 new_size = reconstructed_tensors.shape
@@ -119,8 +142,5 @@ if new_size != tensors_hr.shape:
     tensors_hr = tensors_hr[:new_size[0], :new_size[1], :new_size[2]]
         
 rmse = mean_squared_error(tensors_hr.flatten(), reconstructed_tensors.flatten(), squared=False)
-print("Score:", rmse)
+print("RMSE:", rmse)
 
-# save the image
-with open('reconstructed_tensors.pickle', 'wb') as handle:
-    pickle.dump(reconstructed_tensors, handle)

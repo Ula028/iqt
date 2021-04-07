@@ -3,3 +3,5 @@
 /.ipynb_checkpoints/*
 tensor_ellipsoids_hr.png
 tensor_ellipsoids_lr.png
+tensor_ellipsoids_rec.png
+reconstructed_tensors.pickle

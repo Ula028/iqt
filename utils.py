@@ -48,7 +48,7 @@ def restore_duplicates(tensor):
         tensor ([double]): array containing 6 diffusion parameters
 
     Returns:
-        [double]: a flattened diffusion tensor with 9 elements
+        [double]: a diffusion tensor with 9 elements
     """
     d_yx = tensor[1]
     d_zx = tensor[2]
