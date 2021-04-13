@@ -46,7 +46,7 @@ cfa_rec = RGB_rec
 cfa_rec /= cfa_rec.max()
 
 scene.add(actor.tensor_slicer(evals_rec, evecs_rec, scalar_colors=cfa_rec, sphere=sphere,
-                              scale=0.05))
+                              scale=0.3))
 
 window.record(scene, n_frames=1, out_path='tensor_ellipsoids_rec.png',
               size=(1200, 1200))
