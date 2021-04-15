@@ -45,10 +45,12 @@ def preprocess_data(tensors_lr):
 
     # flatten DT matrices
     s = tensors_lr.shape
+    print("Low resolution tensors shape:", s)
     tensors_lr = np.reshape(tensors_lr, (s[0], s[1], s[2], 9))
 
     # the target resolution after upsampling
     target_resolution = (s[0]*m, s[1]*m, s[2]*m, 3, 3)
+    print("Target resolution after upsampling:", target_resolution)
 
     # remove duplicate entries to obtain the 6 unique parameters
     tensors_lr = np.delete(tensors_lr, [3, 6, 7], axis=3)
@@ -58,43 +60,59 @@ def preprocess_data(tensors_lr):
     # list of central indices of full patches
     c_indices_lr = []
 
-    # extract lr patches
-    dims = tensors_lr.shape
-    for x in range(n, dims[0] - n):
-        for y in range(n, dims[1] - n):
-            for z in range(n, dims[2] - n):
+    # extract full lr patches (but not necessarily contained in the brain)
+    for x in range(n, s[0] - n):
+        for y in range(n, s[1] - n):
+            for z in range(n, s[2] - n):
                 c_indices_lr.append((x, y, z))
 
     return all_indices, c_indices_lr, tensors_lr, target_resolution
 
 
-def reconstruct(all_indices, c_indices_lr, tensors_lr, mask_lr, target_res, model):
+def reconstruct(all_indices, tensors_lr, mask_lr, target_res, model, mean, covariance):
     n = input_radius
     m = upsample_rate
+    
     all_predictions = np.zeros(target_res)
+    
+    print("tensors_lr before padding:", tensors_lr.shape)
+    
+    # pad the arrays to avoid going out of bounds and complete partial patches
+    tensors_lr = np.pad(tensors_lr, n, mode='constant', constant_values=0)
+    tensors_lr = tensors_lr[:, :, :, n:-n]
+    mask_lr = np.pad(mask_lr, n, mode='constant', constant_values=False)
+    
+    print("tensors_lr after padding:", tensors_lr.shape)
+    
     # iterate over the low quality image
     print("Reconstructing high quality image...")
     for index in tqdm(all_indices):
-        x, y, z = index
-        # use the train model if patch is contained in the brain
-        if index in c_indices_lr and utils.contained_in_brain(index, n, mask_lr):
+        x, y, z = tuple(np.array(index) + n)
+        to_predict = False
+        
+        p_mask = mask_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+        # use the patch if it is contained in the brain
+        if np.all(p_mask):
             patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+            to_predict = True    
+            
+        # use the patch filled with conditional mean if it is partially contained in the brain
+        elif np.any(p_mask):
+            p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+            patch = utils.complete_patch(p_mask, p_patch, mean, covariance)
+            patch = np.reshape(patch, (2*n + 1, 2*n + 1, 2*n + 1, 6))  
+            to_predict = False
+        
+        if to_predict:
             patch = patch.flatten().reshape(1, -1)
             prediction = model.predict(patch)
-        # otherwise use the conditional mean
-        else:
-            # use duplicated central patch for now
-            patch = tensors_lr[x, y, z]
-            copied = np.repeat(patch, m * m * m)
-            prediction = np.reshape(copied, (1, 6 * m**3))
-        
-        prediction = np.reshape(prediction, (m, m, m, 6))
-        
-        for xc, plane in enumerate(prediction):
-            for yc, row in enumerate(plane):
-                for zc, voxel in enumerate(row):
-                    voxel = utils.restore_duplicates(voxel)
-                    all_predictions[m * x + xc, m * y + yc, m * z + zc] = voxel
+            prediction = np.reshape(prediction, (m, m, m, 6))
+            
+            for xc, plane in enumerate(prediction):
+                for yc, row in enumerate(plane):
+                    for zc, voxel in enumerate(row):
+                        voxel = utils.restore_duplicates(voxel)
+                        all_predictions[m * x + xc, m * y + yc, m * z + zc] = voxel
         
     
     print("Predictions shape:", all_predictions.shape)
@@ -105,21 +123,39 @@ def reconstruct(all_indices, c_indices_lr, tensors_lr, mask_lr, target_res, mode
 
 
 def load_linear_model():
-    with open('linear_model.pickle', 'rb') as handle:
+    with open('models/linear_model.pickle', 'rb') as handle:
         lin_reg = pickle.load(handle)
     return lin_reg
 
+def load_reg_tree_model():
+    with open('models/linear_model.pickle', 'rb') as handle:
+        reg_tree = pickle.load(handle)
+    return reg_tree
+
+def load_mean():
+    with open('models/mean.pickle', 'rb') as handle:
+        mean = pickle.load(handle)
+    return mean
+
+def load_covariance():
+    with open('models/covariance.pickle', 'rb') as handle:
+        covariance = pickle.load(handle)
+    return covariance
+
 # load the model
 model = load_linear_model()
+mean = load_mean()
+covariance = load_covariance()
 
 # load and preprocess subject data
 tensors_lr, mask_lr, tensors_hr = load_subject_data("962058")
+print("Mask shape:", mask_lr.shape)
 all_indices, c_indices_lr, lr_patches, target_resolution = preprocess_data(
     tensors_lr)
 
 # reconstruct the diffusion tensors
 reconstructed_tensors = reconstruct(
-    all_indices, c_indices_lr, lr_patches, mask_lr, target_resolution, model)
+    all_indices, lr_patches, mask_lr, target_resolution, model, mean, covariance)
 
 print(reconstructed_tensors.shape)
 print(tensors_hr.shape)

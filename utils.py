@@ -12,35 +12,6 @@ def join_path(subject):
     """
     return "raw_data/" + subject + "_3T_Diffusion_preproc/" + subject + "/T1w/Diffusion/"
 
-
-def contained_in_brain(index, radius, mask):
-    """Return True if the patch is contained within the brain or False otherwise.
-    
-    Checks if every corner of the cubic patch is contained within the brain mask, and if yes,
-    assumes that the whole patch is contained within the brain mask.
-
-    Args:
-        index (int, int, int): central index of the patch
-        radius (int): radius of the patch
-        mask ([type]): brain mask
-
-    Returns:
-        boolean: True if the cubic patch is contained within the brain, False otherwise
-    """
-    n = radius
-    x, y, z = index
-    if mask[x + n, y + n, z + n] and \
-            mask[x + n, y + n, z - n] and \
-            mask[x + n, y - n, z + n] and \
-            mask[x + n, y - n, z - n] and \
-            mask[x - n, y + n, z + n] and \
-            mask[x - n, y + n, z - n] and \
-            mask[x - n, y - n, z + n] and \
-            mask[x - n, y - n, z - n]:
-        return True
-    else:
-        return False
-
 def restore_duplicates(tensor):
     """Creates a flattened diffusion tensor from 6 unique diffusion parameters
 
@@ -76,3 +47,10 @@ def create_triples(x_max, y_max, z_max):
             for z in range(0, z_max):
                 triples.append((x, y, z))
     return triples
+
+def complete_patch(p_mask, p_patch, mean, covariance):
+    missing_idx = np.argwhere(p_mask == False)
+    print(p_mask)
+    p_patch[missing_idx, :] = 0
+    print(p_patch)
+    return p_patch
