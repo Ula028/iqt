@@ -2,8 +2,7 @@
 /preprocessed_data/*
 /.ipynb_checkpoints/*
 /models/*
-tensor_ellipsoids_hr.png
-tensor_ellipsoids_lr.png
-tensor_ellipsoids_rec.png
+/plots/*
+/images/*
 reconstructed_tensors.pickle
 __pycache__

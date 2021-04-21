@@ -1,6 +1,6 @@
 
 import numpy as np
-from numpy.linalg.linalg import cond
+from sklearn.impute import KNNImputer
 
 def join_path(subject):
     """Returns the path for diffusion data for a particular subject.
@@ -49,7 +49,7 @@ def create_triples(x_max, y_max, z_max):
                 triples.append((x, y, z))
     return triples
 
-def complete_patch(p_mask, p_patch, mean, covariance):
+def complete_patch_mean(p_mask, p_patch, mean, covariance):
     # calculate the conditional mean given a subset of components
     p_patch = p_patch.flatten()
     p_mask = np.repeat(p_mask[:, :, :, np.newaxis], 6, axis=3)
@@ -60,11 +60,25 @@ def complete_patch(p_mask, p_patch, mean, covariance):
     u1 = mean[missing_idx]
     u2 = mean[known_idx]
     cov12 = covariance[missing_idx, :][:, known_idx]
-    cov22_inv = np.linalg.inv(covariance[known_idx, :][:, known_idx])
+    cov22 = covariance[known_idx, :][:, known_idx]
+    # cov22_inv = np.linalg.inv(covariance[known_idx, :][:, known_idx])
     diff = p_patch[known_idx] - u2
+    x = np.linalg.solve(cov22, diff)
     
-    cond_mean = u1 + np.linalg.multi_dot([cov12, cov22_inv, diff])
+    # cond_mean = u1 + np.linalg.multi_dot([cov12, cov22_inv, diff])
+    cond_mean = u1 + np.dot(cov12, x)
     
     # insert the conditional mean
     p_patch[missing_idx] = cond_mean
     return p_patch
+
+def complete_patch_imputer(p_mask, p_patch, imputer):
+    p_patch = p_patch.reshape(1, 750)
+    p_mask = np.repeat(p_mask[:, :, :, np.newaxis], 6, axis=3)
+    p_mask = p_mask.reshape(1, 750)
+    missing_idx = p_mask == False
+    
+    p_patch[missing_idx] = np.nan
+    patch = imputer.transform(p_patch)
+    
+    return patch

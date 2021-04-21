@@ -58,7 +58,7 @@ def compute_dti_respairs(subject):
     evecs_hr = tenfit_hr.evecs
     print("High resolutions tensors:", quadratic_tensors_hr.shape)
 
-    # save DTIs, eigenvectors, eigenvalues and masks to a file
+    # save DTIs, eigenvectors, eigenvalues and mask to a file
     filename = "preprocessed_data/" + subject + "tensors_hr.npz"
     np.savez_compressed(filename, tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
                         evals_hr=evals_hr, evecs_hr=evecs_hr)
@@ -77,7 +77,7 @@ def compute_dti_respairs(subject):
     evecs_lr = tenfit_lr.evecs
     print("Low resolutions tensors:", quadratic_tensors_lr.shape)
 
-    # save DTIs, eigenvectors, eigenvalues and masks to a file
+    # save DTIs, eigenvectors, eigenvalues and mask to a file
     filename = "preprocessed_data/" + subject + "tensors_lr.npz"
     np.savez_compressed(filename, tensors_lr=quadratic_tensors_lr, mask_lr=mask_lr,
                         evals_lr=evals_lr, evecs_lr=evecs_lr)

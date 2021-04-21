@@ -1,14 +1,18 @@
-import numpy as np
-import utils
 import pickle
+
+import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
+import timeit
+
+import utils
 
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
 input_radius = 2
-rec_boundary = True # use boundary reconstruction using the conditional mean
+rec_boundary = False  # use boundary reconstruction
+use_imputer = False # use KNNImputer to fill missing values in partial patches (otherwise use conditional mean)
 
 
 def load_subject_data(subject):
@@ -61,20 +65,33 @@ def preprocess_data(tensors_lr):
     return all_indices, tensors_lr, target_resolution
 
 
-def reconstruct(all_indices, tensors_lr, mask_lr, target_res, model, mean, covariance):
+def reconstruct(all_indices, tensors_lr, mask_lr, target_res, model_name, use_imputer):
     n = input_radius
     m = upsample_rate
+    
+    # load the model
+    if model_name == 'linear':
+        model = load_linear_model()
+    elif model_name == 'reg_tree':
+        model = load_reg_tree_model()
+    else:
+        model = load_rand_forest_model()
+    
+    # load models for boundary reconstruction
+    if rec_boundary:
+        if use_imputer:
+            imputer = load_imputer()
+        else:
+            mean = load_mean()
+            covariance = load_covariance()
 
     all_predictions = np.zeros(target_res)
-
-    print("tensors_lr before padding:", tensors_lr.shape)
+    predictions_mask = np.zeros(target_res)
 
     # pad the arrays to avoid going out of bounds and complete partial patches
     tensors_lr = np.pad(tensors_lr, n, mode='constant', constant_values=0)
     tensors_lr = tensors_lr[:, :, :, n:-n]
     mask_lr = np.pad(mask_lr, n, mode='constant', constant_values=False)
-
-    print("tensors_lr after padding:", tensors_lr.shape)
 
     # iterate over the low quality image
     print("Reconstructing high quality image...")
@@ -91,10 +108,16 @@ def reconstruct(all_indices, tensors_lr, mask_lr, target_res, model, mean, covar
             patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
             to_predict = True
 
-        # use the patch filled with conditional mean if it is partially contained in the brain
-        elif rec_boundary and np.any(p_mask):
-            p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
-            patch = utils.complete_patch(p_mask, p_patch, mean, covariance)
+        # patch is partially contained in the brain and boundary reconstruction is on
+        elif rec_boundary and p_mask[n, n, n] == True:
+            if use_imputer:
+                # fill the patch using k-Nearest Neighbors imputer
+                p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+                patch = utils.complete_patch_imputer(p_mask, p_patch, imputer)
+            else:
+                # fill the patch with conditional mean
+                p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+                patch = utils.complete_patch_mean(p_mask, p_patch, mean, covariance)
             to_predict = True
 
         if to_predict:
@@ -105,17 +128,33 @@ def reconstruct(all_indices, tensors_lr, mask_lr, target_res, model, mean, covar
             for xc, plane in enumerate(prediction):
                 for yc, row in enumerate(plane):
                     for zc, voxel in enumerate(row):
-                        if mask_lr[x, y, z] == True:
+                        if p_mask[n, n, n] == True:
                             voxel = utils.restore_duplicates(voxel)
                             all_predictions[m * (x - n) + xc, m *
                                             (y - n) + yc, m * (z - n) + zc] = voxel
+                            predictions_mask[m * (x - n) + xc, m *
+                                            (y - n) + yc, m * (z - n) + zc] = True
 
     print("Predictions shape:", all_predictions.shape)
     print("Target shape:", target_res)
     image = np.reshape(all_predictions, target_res)
 
-    return image
+    return image, predictions_mask
 
+def masked_rmse(original_hr, reconst_hr, reconst_mask):
+    
+    # cast to common size if sizes different
+    new_size = reconst_hr.shape
+    if new_size != original_hr.shape:
+        original_hr = original_hr[:new_size[0], :new_size[1], :new_size[2]]
+    
+    # mask original hr tensors to calculate error without boundary
+    to_delete = reconst_mask == False
+    original_hr[to_delete] = 0
+    
+    # calculate rmse
+    rmse = mean_squared_error(original_hr.flatten(), reconst_hr.flatten(), squared=False)
+    return rmse
 
 def load_linear_model():
     with open('models/linear_model.pickle', 'rb') as handle:
@@ -124,6 +163,12 @@ def load_linear_model():
 
 
 def load_reg_tree_model():
+    with open('models/reg_tree_model.pickle', 'rb') as handle:
+        reg_tree = pickle.load(handle)
+    return reg_tree
+
+def load_rand_forest_model():
+    # LOADS LINEAR MODEL
     with open('models/linear_model.pickle', 'rb') as handle:
         reg_tree = pickle.load(handle)
     return reg_tree
@@ -140,41 +185,44 @@ def load_covariance():
         covariance = pickle.load(handle)
     return covariance
 
+def load_imputer():
+    with open('models/imputer.pickle', 'rb') as handle:
+        imputer = pickle.load(handle)
+    return imputer
 
-# load the model
-model = load_linear_model()
-mean = load_mean()
-covariance = load_covariance()
+subject = "175136"
+
+starttime = timeit.default_timer()
 
 # load and preprocess subject data
-tensors_lr, mask_lr, tensors_hr = load_subject_data("962058")
+tensors_lr, mask_lr, tensors_hr = load_subject_data(subject)
 all_indices, lr_patches, target_resolution = preprocess_data(
     tensors_lr)
 
 # reconstruct the diffusion tensors
-reconstructed_tensors = reconstruct(
-    all_indices, lr_patches, mask_lr, target_resolution, model, mean, covariance)
-
-print(reconstructed_tensors.shape)
-print(tensors_hr.shape)
+reconstructed_tensors, reconstructed_tensors_mask = reconstruct(
+    all_indices, lr_patches, mask_lr, target_resolution, 'reg_tree', use_imputer)
 
 # save the reconstructed DTIs
 with open('reconstructed_tensors.pickle', 'wb') as handle:
     pickle.dump(reconstructed_tensors, handle)
 
 # load previously fitted DTIs
-tensor_file_hr = np.load("preprocessed_data/" + "962058" + "tensors_hr.npz")
+tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
 tensors_hr = tensor_file_hr['tensors_hr']
 
 # load reconstructed DTIs
 with open('reconstructed_tensors.pickle', 'rb') as handle:
     reconstructed_tensors = pickle.load(handle)
 
-# cast to common size if sizes different
-new_size = reconstructed_tensors.shape
-if new_size != tensors_hr.shape:
-    tensors_hr = tensors_hr[:new_size[0], :new_size[1], :new_size[2]]
+# calculate error
+err = masked_rmse(tensors_hr, reconstructed_tensors, reconstructed_tensors_mask)
 
-rmse = mean_squared_error(tensors_hr.flatten(
-), reconstructed_tensors.flatten(), squared=False)
-print("RMSE:", rmse)
+print("Boundary reconstruction:", rec_boundary)
+if rec_boundary:
+    if use_imputer:
+        print("Method: imputer")
+    else:
+        print("Method: conditional mean")
+print("RMSE:", err)
+print("Execution time :", timeit.default_timer() - starttime)
