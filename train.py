@@ -41,20 +41,20 @@ test_lr, test_hr = load_testing_data()
 
 print("Training the model...")
 # lin_reg = LinearRegression().fit(train_lr, train_hr)
-reg_tree = DecisionTreeRegressor(criterion='mse').fit(train_lr, train_hr)
-# ran_forest = RandomForestRegressor(n_estimators=10).fit(train_lr, train_hr)
+# reg_tree = DecisionTreeRegressor(criterion='mse').fit(train_lr, train_hr)
+ran_forest = RandomForestRegressor(n_estimators=10).fit(train_lr, train_hr)
 
 # print("Calculating normal distrubution...")
 # mean = np.mean(train_lr, axis=0)
 # covariance = np.cov(train_lr, rowvar=False)
 
-prediction = reg_tree.predict(test_lr)
+prediction = ran_forest.predict(test_lr)
 rmse = mean_squared_error(test_hr, prediction, squared=False)
 print("Score:", rmse)
 
 # save the model
-with open('models/reg_tree_model.pickle', 'wb') as handle:
-    pickle.dump(reg_tree, handle)
+with open('models/ran_forest.pickle', 'wb') as handle:
+    pickle.dump(ran_forest, handle)
 
 # # save the normal distribution
 # with open('models/mean.pickle', 'wb') as handle:
