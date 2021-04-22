@@ -8,6 +8,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
+from sklearn.model_selection import GridSearchCV
 import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -36,25 +37,46 @@ print("Loading data...")
 train_lr, train_hr = load_training_data()
 test_lr, test_hr = load_testing_data()
 
+# print("Training the imputer...")
 # imputer = IterativeImputer(max_iter=10, random_state=0)
-# imputer = imputer.fit(train_lr[:300, :])
+# imputer = imputer.fit(train_lr)
 
-print("Training the model...")
+# print("Training the model...")
 # lin_reg = LinearRegression().fit(train_lr, train_hr)
 # reg_tree = DecisionTreeRegressor(criterion='mse').fit(train_lr, train_hr)
-ran_forest = RandomForestRegressor(n_estimators=10).fit(train_lr, train_hr)
+# ran_forest = RandomForestRegressor(n_estimators=10).fit(train_lr, train_hr)
+
+# grid search for DecisionTreeRegressor
+print("Performing grid search...")
+param_grid = [
+    {'max_depth': [16, 32, 48, 64], 
+     'min_samples_split': [10, 100, 1000], 
+     'min_samples_leaf': [10, 100, 1000], 
+     'max_features': ['sqrt', 'log2']}
+]
+reg_tree = DecisionTreeRegressor()
+grid_search = GridSearchCV(reg_tree, param_grid, cv=5, scoring='neg_mean_squared_error', return_train_score=True, refit=True, verbose=3)
+grid_search.fit(train_lr, train_hr)
+
+# get the best model
+model = grid_search.best_estimator_
+
+# print the results
+cvres = grid_search.cv_results_
+for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
+    print(np.sqrt(-mean_score), params)
 
 # print("Calculating normal distrubution...")
 # mean = np.mean(train_lr, axis=0)
 # covariance = np.cov(train_lr, rowvar=False)
 
-prediction = ran_forest.predict(test_lr)
-rmse = mean_squared_error(test_hr, prediction, squared=False)
-print("Score:", rmse)
+# prediction = ran_forest.predict(test_lr)
+# rmse = mean_squared_error(test_hr, prediction, squared=False)
+# print("Score:", rmse)
 
 # save the model
-with open('models/ran_forest.pickle', 'wb') as handle:
-    pickle.dump(ran_forest, handle)
+with open('models/reg_tree_model.pickle', 'wb') as handle:
+    pickle.dump(model, handle)
 
 # # save the normal distribution
 # with open('models/mean.pickle', 'wb') as handle:

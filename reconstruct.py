@@ -13,7 +13,7 @@ upsample_rate = 2  # the super-resolution factor (m in paper)
 input_radius = 2
 rec_boundary = False  # use boundary reconstruction
 use_imputer = False # use KNNImputer to fill missing values in partial patches (otherwise use conditional mean)
-
+model_name = 'linear' # 'reg_tree'
 
 def load_subject_data(subject):
     """Load low resolution tensors, low resolution mask and high resolution tensors of a subject
@@ -76,6 +76,8 @@ def reconstruct(all_indices, tensors_lr, mask_lr, target_res, model_name, use_im
         model = load_reg_tree_model()
     else:
         model = load_rand_forest_model()
+        
+    # print("Depth of the decision tree:", model.get_depth())
     
     # load models for boundary reconstruction
     if rec_boundary:
@@ -201,7 +203,7 @@ all_indices, lr_patches, target_resolution = preprocess_data(
 
 # reconstruct the diffusion tensors
 reconstructed_tensors, reconstructed_tensors_mask = reconstruct(
-    all_indices, lr_patches, mask_lr, target_resolution, 'reg_tree', use_imputer)
+    all_indices, lr_patches, mask_lr, target_resolution, model_name, use_imputer)
 
 # save the reconstructed DTIs
 with open('reconstructed_tensors.pickle', 'wb') as handle:
