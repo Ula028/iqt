@@ -46,16 +46,18 @@ test_lr, test_hr = load_testing_data()
 # reg_tree = DecisionTreeRegressor(criterion='mse').fit(train_lr, train_hr)
 # ran_forest = RandomForestRegressor(n_estimators=10).fit(train_lr, train_hr)
 
-# grid search for DecisionTreeRegressor
+# grid search for RandomForestRegressor
 print("Performing grid search...")
 param_grid = [
-    {'max_depth': [16, 32, 48, 64], 
-     'min_samples_split': [10, 100, 1000], 
-     'min_samples_leaf': [10, 100, 1000], 
-     'max_features': ['sqrt', 'log2']}
+    {'n_estimators': [10, 50, 100],
+     'max_depth': [16, 32, 64], 
+     'n_jobs': [-1]}, 
+    {'max_features': ['sqrt', 'log2'], 
+     'bootstrap': [True, False], 
+     'n_jobs': [-1]}
 ]
-reg_tree = DecisionTreeRegressor()
-grid_search = GridSearchCV(reg_tree, param_grid, cv=5, scoring='neg_mean_squared_error', return_train_score=True, refit=True, verbose=3)
+rand_forest = RandomForestRegressor(random_state=42)
+grid_search = GridSearchCV(rand_forest, param_grid, cv=5, scoring='neg_mean_squared_error', return_train_score=True, refit=True, verbose=3)
 grid_search.fit(train_lr, train_hr)
 
 # get the best model
