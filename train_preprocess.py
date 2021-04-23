@@ -204,12 +204,23 @@ def create_dataset(subjects, name):
         all_patches_lr = np.append(all_patches_lr, patches_lr, axis=0)
         all_patches_hr = np.append(all_patches_hr, patches_hr, axis=0)
 
+    s_hr = all_patches_lr.shape
+    s_lr = all_patches_lr.shape
+    
+    # keep a random sample
+    n_samples = int(np.floor(s_lr[0] / 4))
+    sample = np.random.choice(
+        range(s_lr[0]), size=n_samples, replace=False)
+
+    patches_lr = all_patches_lr[sample, :]
+    patches_hr = all_patches_hr[sample, :]
+
     print("Saving the " + name + " dataset...")
     # save dataset to a file
-    print(all_patches_hr.shape)
-    print(all_patches_lr.shape)
-    np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=all_patches_lr,
-                        patches_hr=all_patches_hr)
+    print(patches_hr.shape)
+    print(patches_lr.shape)
+    np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=patches_lr,
+                        patches_hr=patches_hr)
 
 
 subjects_train = ["115724", "688569", "137431",

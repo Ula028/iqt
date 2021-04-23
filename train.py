@@ -40,47 +40,10 @@ test_lr, test_hr = load_testing_data()
 # imputer = IterativeImputer(max_iter=10, random_state=0)
 # imputer = imputer.fit(train_lr)
 
-# print("Training the model...")
+print("Training the model...")
 # lin_reg = LinearRegression().fit(train_lr, train_hr)
 # reg_tree = DecisionTreeRegressor(criterion='mse').fit(train_lr, train_hr)
-# ran_forest = RandomForestRegressor(n_estimators=10).fit(train_lr, train_hr)
-
-# grid search for RandomForestRegressor
-
-print("Performing randomised grid search...")
-
-n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
-max_features = ['auto', 'sqrt', 'log2']
-max_depth = [int(x) for x in np.linspace(start=10, stop=110, num=11)]
-min_samples_split = [2, 5, 10]
-min_samples_leaf = [1, 2, 4]
-bootstrap = [True, False]
-
-random_grid = {
-    'n_estimators': n_estimators,
-    'max_features': max_features,
-    'max_depth': max_depth,
-    'min_samples_split': min_samples_split,
-    'min_samples_leaf': min_samples_leaf,
-    'bootstrap': bootstrap
-}
-
-rf = RandomForestRegressor(random_state=42)
-rf_random = RandomizedSearchCV(estimator=rf, param_distributions=random_grid,
-                               n_iter=100, cv=3,  return_train_score=True, refit=True, verbose=3, n_jobs=-1)
-rf_random.fit(train_lr, train_hr)
-
-# get the best model
-model = rf_random.best_estimator_
-
-# print the results
-cvres = rf_random.cv_results_
-for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
-    print(np.sqrt(-mean_score), params)
-
-# save the results
-with open('cvres.pickle', 'wb') as handle:
-    pickle.dump(cvres, handle)
+ran_forest = RandomForestRegressor(n_estimators=10, max_depth=20).fit(train_lr, train_hr)
 
 # print("Calculating normal distrubution...")
 # mean = np.mean(train_lr, axis=0)
@@ -91,8 +54,8 @@ with open('cvres.pickle', 'wb') as handle:
 # print("Score:", rmse)
 
 # save the model
-with open('models/reg_tree_model.pickle', 'wb') as handle:
-    pickle.dump(model, handle)
+with open('models/ran_forest_model.pickle', 'wb') as handle:
+    pickle.dump(ran_forest, handle)
 
 # # save the normal distribution
 # with open('models/mean.pickle', 'wb') as handle:
