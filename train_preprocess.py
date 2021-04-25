@@ -1,15 +1,17 @@
 """A script that creates training data for IQT random forest
 training from a typical HCP dataset.
 """
-import numpy as np
-import utils
-from dipy.io.image import load_nifti
-from dipy.io.gradients import read_bvals_bvecs
-from dipy.core.gradients import gradient_table
-from dipy.segment.mask import median_otsu
-from dipy.align.reslice import reslice
-import dipy.reconst.dti as dti
 import gc
+
+import dipy.reconst.dti as dti
+import numpy as np
+from dipy.align.reslice import reslice
+from dipy.core.gradients import gradient_table
+from dipy.io.gradients import read_bvals_bvecs
+from dipy.io.image import load_nifti
+from dipy.segment.mask import median_otsu
+
+import utils
 
 # settings
 dw_fname = "data.nii.gz"
@@ -20,7 +22,7 @@ grad_file = "grad_dev.nii.gz"
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
 input_radius = 2
-datasample_rate = 2  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
+datasample_rate = 1  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
 no_rnds = 8  # no of separate training sets to be created
 
 
@@ -112,8 +114,10 @@ def compute_patchlib(subject):
         for y in range(n, dims[1] - n):
             for z in range(n, dims[2] - n):
 
+                p_mask = mask_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+                
                 # save location if the cubic patch is contained within the brain
-                if utils.contained_in_brain((x, y, z), n, mask_lr):
+                if np.all(p_mask):
                     c_indices_lr_features.append((x, y, z))
 
     # list of start and end indices for lr
@@ -127,7 +131,7 @@ def compute_patchlib(subject):
     n_pairs = len(indices_lr_features)
     lr_size = 2*n + 1
 
-    print("Extracting patch pairs...")
+    print("Extracting " + str(n_pairs) +" patch pairs...")
     tensors_hr = tensor_file_hr['tensors_hr']
     tensors_lr = tensor_file_lr['tensors_lr']
 
@@ -164,15 +168,16 @@ def compute_patchlib(subject):
     hr_patches = np.reshape(hr_patches, (s_hr[0], vec_len_hr))
     print(hr_patches.shape)
 
-    # keep a random sample
-    n_samples = int(np.floor(s_lr[0] / datasample_rate))
-    sample = np.random.choice(
-        range(s_lr[0]), size=n_samples, replace=False)
+    if datasample_rate > 1:
+        # keep a random sample
+        n_samples = int(np.floor(s_lr[0] / datasample_rate))
+        sample = np.random.choice(
+            range(s_lr[0]), size=n_samples, replace=False)
 
-    lr_patches = lr_patches[sample, :]
-    hr_patches = hr_patches[sample, :]
+        lr_patches = lr_patches[sample, :]
+        hr_patches = hr_patches[sample, :]
 
-    print("Saving patch pairs...")
+    print("Saving " + str(len(lr_patches)) + " patch pairs...")
     # save patches to a file
     np.savez_compressed("preprocessed_data/" + subject + "patches.npz", patches_lr=lr_patches,
                         patches_hr=hr_patches)
@@ -204,29 +209,20 @@ def create_dataset(subjects, name):
         all_patches_lr = np.append(all_patches_lr, patches_lr, axis=0)
         all_patches_hr = np.append(all_patches_hr, patches_hr, axis=0)
 
-    s_hr = all_patches_lr.shape
-    s_lr = all_patches_lr.shape
-    
-    # keep a random sample
-    n_samples = int(np.floor(s_lr[0] / 4))
-    sample = np.random.choice(
-        range(s_lr[0]), size=n_samples, replace=False)
-
-    patches_lr = all_patches_lr[sample, :]
-    patches_hr = all_patches_hr[sample, :]
-
     print("Saving the " + name + " dataset...")
     # save dataset to a file
-    print(patches_hr.shape)
-    print(patches_lr.shape)
-    np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=patches_lr,
-                        patches_hr=patches_hr)
-
+    print(all_patches_lr.shape)
+    print(all_patches_hr.shape)
+    np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=all_patches_lr,
+                        patches_hr=all_patches_hr)
 
 subjects_train = ["115724", "688569", "137431",
                   "757764", "206828", "145632", "516742", "211417"]
 subjects_test = ["175136", "180230", "468050",
                  "902242", "886674", "962058", "103212", "792867"]
+
+for subject in subjects_test:
+    compute_patchlib(subject)
 
 create_dataset(subjects_train, "train_data")
 create_dataset(subjects_test, "test_data")
