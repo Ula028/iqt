@@ -3,7 +3,7 @@ import timeit
 
 import numpy as np
 from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
+from sklearn.impute import IterativeImputer, KNNImputer
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
@@ -15,7 +15,7 @@ upsample_rate = 2  # the super-resolution factor (m in paper)
 input_radius = 2
 rec_boundary = True  # use boundary reconstruction
 # use KNNImputer to fill missing values in partial patches (otherwise use conditional mean)
-use_imputer = False
+imputer_name = 'conditional' # iterative, conditional
 model_name = 'linear'  # 'reg_tree'
 
 
@@ -69,7 +69,7 @@ def preprocess_data(tensors_lr):
     return all_indices, tensors_lr, target_resolution
 
 
-def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model_name, use_imputer):
+def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model_name, imputer_name):
     n = input_radius
     m = upsample_rate
 
@@ -85,10 +85,16 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model_nam
 
     # load models for boundary reconstruction
     if rec_boundary:
-        if use_imputer:
-            print("Training the imputer...")
+        if imputer_name == 'iterative':
+            print("Training the iterative imputer...")
             imputer_patches = utils.load_patches(subject)
             imputer = IterativeImputer(max_iter=20, random_state=0)
+            imputer = imputer.fit(imputer_patches)
+            imputer_patches = 0
+        elif imputer_name == 'knn':
+            print("Training the knn imputer...")
+            imputer_patches = utils.load_patches(subject)
+            imputer = KNNImputer()
             imputer = imputer.fit(imputer_patches)
             imputer_patches = 0
         else:
@@ -120,8 +126,8 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model_nam
 
         # patch is partially contained in the brain and boundary reconstruction is on
         elif rec_boundary and p_mask[n, n, n] == True:
-            if use_imputer:
-                # fill the patch using k-Nearest Neighbors imputer
+            if imputer_name == 'iterative' or imputer_name == 'knn':
+                # fill the patch using the imputer
                 p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
                 patch = utils.complete_patch_imputer(p_mask, p_patch, imputer)
             else:
@@ -181,7 +187,7 @@ all_indices, lr_patches, target_resolution = preprocess_data(
 
 # reconstruct the diffusion tensors
 reconstructed_tensors, reconstructed_tensors_mask = reconstruct(subject,
-                                                                all_indices, lr_patches, mask_lr, target_resolution, model_name, use_imputer)
+                                                                all_indices, lr_patches, mask_lr, target_resolution, model_name, imputer_name)
 
 # save the reconstructed DTIs
 with open('reconstructed_tensors.pickle', 'wb') as handle:
@@ -197,9 +203,11 @@ err = masked_rmse(tensors_hr, reconstructed_tensors,
 
 print("Boundary reconstruction:", rec_boundary)
 if rec_boundary:
-    if use_imputer:
-        print("Method: imputer")
+    if imputer_name == 'iterative':
+        print("Method: Iterative Imputer")
+    elif imputer_name == 'knn':
+        print("Method: KNN Imputer")
     else:
-        print("Method: conditional mean")
+        print("Method: Conditional Mean")
 print("RMSE:", err)
 print("Execution time :", timeit.default_timer() - starttime)
