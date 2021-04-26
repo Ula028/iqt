@@ -132,3 +132,19 @@ def load_patches(subject, hr=False):
     else:
         patches = dict_data['patches_lr']
     return patches
+
+def load_testing_data():
+    dict_data = np.load('preprocessed_data/test_data.npz')
+    patches_lr = dict_data['patches_lr']
+    patches_hr = dict_data['patches_hr']
+    print("Test patches_lr shape:", patches_lr.shape)
+    print("Test patches_hr shape:", patches_hr.shape)
+    return patches_lr, patches_hr
+
+def load_training_data():
+    dict_data = np.load('preprocessed_data/train_data.npz')
+    patches_lr = dict_data['patches_lr']
+    patches_hr = dict_data['patches_hr']
+    print("Train patches_lr shape:", patches_lr.shape)
+    print("Train patches_hr shape:", patches_hr.shape)
+    return patches_lr, patches_hr
