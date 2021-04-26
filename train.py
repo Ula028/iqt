@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from hpsklearn import HyperoptEstimator, random_forest_regression
 from hyperopt import hp
+from hyperopt.pyll.base import scope
+from hyperopt.pyll.stochastic import sample
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
@@ -27,8 +29,8 @@ def main():
     # lin_reg = LinearRegression().fit(train_lr, train_hr)
     # reg_tree = DecisionTreeRegressor(criterion='mse').fit(train_lr, train_hr)
 
-    n_estimators = hp.quniform('n_estimators', 5, 15, 1)
-    max_depth = hp.quniform('max_depth', 10, 50, 1)
+    n_estimators = sample(scope.int(hp.quniform('n_estimators', 5, 15, 1)))
+    max_depth = sample(scope.int(hp.quniform('max_depth', 10, 50, 1)))
     max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
     bootstrap = hp.choice('bootstrap', [True, False])
     max_samples = hp.uniform('max_samples', 0, 1)
