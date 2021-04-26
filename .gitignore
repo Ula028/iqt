@@ -3,6 +3,5 @@
 /.ipynb_checkpoints/*
 /models/*
 /plots/*
-/images/*
 reconstructed_tensors.pickle
 __pycache__
