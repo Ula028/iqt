@@ -17,8 +17,8 @@ import utils
 
 
 def estimate_random_forest(train_lr, train_hr):
-    n_estimators = sample(scope.int(hp.quniform('n_estimators', 5, 15, 1)))
-    max_depth = sample(scope.int(hp.quniform('max_depth', 10, 50, 1)))
+    n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 20, 1)))
+    max_depth = sample(scope.int(hp.quniform('max_depth', 30, 70, 1)))
     max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
     bootstrap = hp.choice('bootstrap', [True, False])
 
