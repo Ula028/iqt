@@ -134,6 +134,7 @@ def load_patches(subject, hr=False):
     return patches
 
 def load_testing_data():
+    print("Loading testing data...")
     dict_data = np.load('preprocessed_data/test_data.npz')
     patches_lr = dict_data['patches_lr']
     patches_hr = dict_data['patches_hr']
@@ -142,6 +143,7 @@ def load_testing_data():
     return patches_lr, patches_hr
 
 def load_training_data():
+    print("Loading training data...")
     dict_data = np.load('preprocessed_data/train_data.npz')
     patches_lr = dict_data['patches_lr']
     patches_hr = dict_data['patches_hr']
