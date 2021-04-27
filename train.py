@@ -16,7 +16,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.tree import DecisionTreeRegressor
 
 import utils
-
+import os
 
 def estimate_random_forest(train_lr, train_hr):
     n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 20, 1)))
@@ -101,6 +101,7 @@ def calculate_gaussian(train_lr):
 
 
 if __name__ == "__main__":
+    os.environ['OMP_NUM_THREADS'] = '1'
 
     train_lr, train_hr = utils.load_training_data()
     # ran_forest = train_ran_forest(train_lr, train_hr)
