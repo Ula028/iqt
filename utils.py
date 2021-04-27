@@ -91,7 +91,7 @@ def complete_patch_imputer(p_mask, p_patch, imputer):
 
 
 def load_linear_model():
-    with open('models/linear_model.pickle', 'rb') as handle:
+    with open('models/lin_reg_model.pickle', 'rb') as handle:
         lin_reg = pickle.load(handle)
     return lin_reg
 

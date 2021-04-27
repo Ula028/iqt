@@ -13,9 +13,9 @@ import utils
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
 input_radius = 2
-rec_boundary = True  # use boundary reconstruction
+rec_boundary = False  # use boundary reconstruction
 # use KNNImputer to fill missing values in partial patches (otherwise use conditional mean)
-imputer_name = 'conditional' # iterative, conditional
+imputer_name = 'conditional'  # iterative, conditional
 model_name = 'linear'  # 'reg_tree'
 
 
@@ -128,11 +128,13 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model_nam
         elif rec_boundary and p_mask[n, n, n] == True:
             if imputer_name == 'iterative' or imputer_name == 'knn':
                 # fill the patch using the imputer
-                p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+                p_patch = tensors_lr[(x-n):(x+n+1), (y-n)
+                                      :(y+n+1), (z-n):(z+n+1)]
                 patch = utils.complete_patch_imputer(p_mask, p_patch, imputer)
             else:
                 # fill the patch with conditional mean
-                p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+                p_patch = tensors_lr[(x-n):(x+n+1), (y-n)
+                                      :(y+n+1), (z-n):(z+n+1)]
                 patch = utils.complete_patch_mean(
                     p_mask, p_patch, mean, covariance)
             to_predict = True
@@ -152,9 +154,14 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model_nam
                             predictions_mask[m * (x - n) + xc, m *
                                              (y - n) + yc, m * (z - n) + zc] = True
 
+    
     print("Predictions shape:", all_predictions.shape)
     print("Target shape:", target_res)
     image = np.reshape(all_predictions, target_res)
+    
+    # save the reconstructed DTIs
+    with open('reconstructed/rec_tensors_hr.pickle', 'wb') as handle:
+        pickle.dump(image, handle)
 
     return image, predictions_mask
 
@@ -176,38 +183,37 @@ def masked_rmse(original_hr, reconst_hr, reconst_mask):
     return rmse
 
 
-subject = "175136"
+if __name__ == "__main__":
+    subject = "175136"
 
-starttime = timeit.default_timer()
+    starttime = timeit.default_timer()
 
-# load and preprocess subject data
-tensors_lr, mask_lr, tensors_hr = load_subject_data(subject)
-all_indices, lr_patches, target_resolution = preprocess_data(
-    tensors_lr)
+    # load and preprocess subject data
+    tensors_lr, mask_lr, tensors_hr = load_subject_data(subject)
+    all_indices, lr_patches, target_resolution = preprocess_data(
+        tensors_lr)
 
-# reconstruct the diffusion tensors
-reconstructed_tensors, reconstructed_tensors_mask = reconstruct(subject,
-                                                                all_indices, lr_patches, mask_lr, target_resolution, model_name, imputer_name)
+    # reconstruct the diffusion tensors
+    reconstructed_tensors, reconstructed_tensors_mask = reconstruct(subject,
+                                                                    all_indices, lr_patches, mask_lr, target_resolution, model_name, imputer_name)
 
-# save the reconstructed DTIs
-with open('reconstructed_tensors.pickle', 'wb') as handle:
-    pickle.dump(reconstructed_tensors, handle)
+    
 
-# load previously fitted DTIs
-tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
-tensors_hr = tensor_file_hr['tensors_hr']
+    # load previously fitted DTIs
+    tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
+    tensors_hr = tensor_file_hr['tensors_hr']
 
-# calculate error
-err = masked_rmse(tensors_hr, reconstructed_tensors,
-                  reconstructed_tensors_mask)
+    # calculate error
+    err = masked_rmse(tensors_hr, reconstructed_tensors,
+                      reconstructed_tensors_mask)
 
-print("Boundary reconstruction:", rec_boundary)
-if rec_boundary:
-    if imputer_name == 'iterative':
-        print("Method: Iterative Imputer")
-    elif imputer_name == 'knn':
-        print("Method: KNN Imputer")
-    else:
-        print("Method: Conditional Mean")
-print("RMSE:", err)
-print("Execution time :", timeit.default_timer() - starttime)
+    print("Boundary reconstruction:", rec_boundary)
+    if rec_boundary:
+        if imputer_name == 'iterative':
+            print("Method: Iterative Imputer")
+        elif imputer_name == 'knn':
+            print("Method: KNN Imputer")
+        else:
+            print("Method: Conditional Mean")
+    print("RMSE:", err)
+    print("Execution time :", timeit.default_timer() - starttime)

@@ -1,7 +1,7 @@
-/raw_data/*
-/preprocessed_data/*
+__pycache__
 /.ipynb_checkpoints/*
 /models/*
 /plots/*
-reconstructed_tensors.pickle
-__pycache__
+/preprocessed_data/*
+/raw_data/*
+/reconstructed/*

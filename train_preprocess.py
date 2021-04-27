@@ -125,7 +125,7 @@ def compute_patchlib(subject):
                            for (x, y, z) in c_indices_lr_features]
 
     # list of start and end indices for hr
-    indices_hr_features = [(x*n, x*n + m, y*n, y*n + m, z*n, z*n + m)
+    indices_hr_features = [(x*m, x*m + m, y*m, y*m + m, z*m, z*m + m)
                            for (x, y, z) in c_indices_lr_features]
 
     n_pairs = len(indices_lr_features)
@@ -216,14 +216,15 @@ def create_dataset(subjects, name):
     np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=all_patches_lr,
                         patches_hr=all_patches_hr)
 
-subjects_train = ["115724", "688569", "137431",
-                  "757764", "206828", "145632", "516742", "211417"]
-subjects_test = ["175136", "180230", "468050",
-                 "902242", "886674", "962058", "103212", "792867"]
+if __name__ == "__main__":
+    subjects_train = ["115724", "688569", "137431",
+                    "757764", "206828", "145632", "516742", "211417"]
+    subjects_test = ["175136", "180230", "468050",
+                    "902242", "886674", "962058", "103212", "792867"]
 
-for subject in subjects_test:
-    compute_patchlib(subject)
+    for subject in subjects_test:
+        compute_patchlib(subject)
 
-create_dataset(subjects_train, "train_data")
-create_dataset(subjects_test, "test_data")
-gc.collect()
+    create_dataset(subjects_train, "train_data")
+    create_dataset(subjects_test, "test_data")
+    gc.collect()

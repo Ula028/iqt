@@ -5,48 +5,55 @@ from dipy.reconst.dti import fractional_anisotropy, color_fa
 import numpy as np
 import pickle
 
-subject = "962058"
 
-# load previously fitted DTIs
-tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
+if __name__ == "__main__":
 
-# load reconstructed DTIs
-with open('reconstructed_tensors.pickle', 'rb') as handle:
-    reconstruction = pickle.load(handle)
+    subject = '175136'
+    which = 'original'
 
-# get original hr eigenvalues and eigenvectors
-evals_hr = tensor_file_hr['evals_hr']
-evecs_hr = tensor_file_hr['evecs_hr']
+    if which == 'original':
+        # load previously fitted DTIs
+        tensor_file_hr = np.load(
+            "preprocessed_data/" + subject + "tensors_hr.npz")
 
-# get reconstructed hr eigenvalues and eigenvectors
-evals_rec, evecs_rec = np.linalg.eigh(reconstruction[:, :, :], UPLO="U")
+        # get original hr eigenvalues and eigenvectors
+        evals = tensor_file_hr['evals_hr']
+        evecs = tensor_file_hr['evecs_hr']
 
-evals_rec = evals_rec[:, :, :, ::-1]
-evecs_rec = evecs_rec[:, :, :, :, ::-1]
+    elif which == 'interpolation':
+        # load interpolated DTIs
+        tensor_file_inter = np.load("reconstructed/" + subject + "inter_tensors_hr.npz")
 
-# # hr
-# FA_hr = fractional_anisotropy(evals_hr)
-# FA_hr[np.isnan(FA_hr)] = 0
+        # get original eigenvalues and eigenvectors
+        evals = tensor_file_inter['evals_hr']
+        evecs = tensor_file_inter['evecs_hr']
 
-# FA_hr = np.clip(FA_hr, 0, 1)
-# RGB_hr = color_fa(FA_hr, evecs_hr)
+    else:
+        # load reconstructed DTIs
+        with open('reconstructed/' + subject + 'rec_tensors_hr.pickle', 'rb') as handle:
+            reconstruction = pickle.load(handle)
 
+        # get reconstructed hr eigenvalues and eigenvectors
+        evals, evecs = np.linalg.eigh(reconstruction[:, :, :], UPLO="U")
+        evals = evals[:, :, :, ::-1]
+        evecs = evecs[:, :, :, :, ::-1]
 
-# reconstructed hr
-FA_rec = fractional_anisotropy(evals_rec)
+    # create png image
+    FA = fractional_anisotropy(evals)
 
-FA_rec = np.clip(FA_rec, 0, 1)
-RGB_rec = color_fa(FA_rec, evecs_rec)
+    FA = np.clip(FA, 0, 1)
+    RGB = color_fa(FA, evecs)
 
-sphere = get_sphere('repulsion724')
+    sphere = get_sphere('repulsion724')
 
-scene = window.Scene()
+    scene = window.Scene()
 
-cfa_rec = RGB_rec
-cfa_rec /= cfa_rec.max()
+    cfa = RGB
+    cfa /= cfa.max()
 
-scene.add(actor.tensor_slicer(evals_rec, evecs_rec, scalar_colors=cfa_rec, sphere=sphere,
-                              scale=0.3))
+    scene.add(actor.tensor_slicer(evals, evecs, scalar_colors=cfa, sphere=sphere,
+                                  scale=0.3))
 
-window.record(scene, n_frames=1, out_path='tensor_ellipsoids_rec.png',
-              size=(1200, 1200))
+    path = 'images/' + subject + 'tensor_ellipsoids_' + which + '.png'
+    window.record(scene, n_frames=1, out_path=path,
+                  size=(1200, 1200))
