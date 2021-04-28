@@ -1,23 +1,21 @@
 """A script that trains a model for IQT random forest
 using previously created dataset.
 """
+import utils
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error
+from sklearn.linear_model import LinearRegression
+from sklearn.impute import IterativeImputer
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.ensemble import RandomForestRegressor
+from hyperopt.pyll.stochastic import sample
+from hyperopt.pyll.base import scope
+from hyperopt import hp
+from hpsklearn import HyperoptEstimator, random_forest_regression
+import numpy as np
 import pickle
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
-
-import numpy as np
-from hpsklearn import HyperoptEstimator, random_forest_regression
-from hyperopt import hp
-from hyperopt.pyll.base import scope
-from hyperopt.pyll.stochastic import sample
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
-from sklearn.tree import DecisionTreeRegressor
-
-import utils
 
 
 def estimate_random_forest(train_lr, train_hr):
@@ -26,7 +24,8 @@ def estimate_random_forest(train_lr, train_hr):
     max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
     bootstrap = hp.choice('bootstrap', [True, False])
 
-    estim = HyperoptEstimator(regressor=random_forest_regression('my_forest'), max_evals=40, trial_timeout=10800)
+    estim = HyperoptEstimator(regressor=random_forest_regression(
+        'my_forest', n_estimators=n_estimators, max_depth=max_depth, max_features='sqrt'), max_evals=20, trial_timeout=10800)
     estim.fit(train_lr, train_hr)
 
     print(estim.best_model())
