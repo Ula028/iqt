@@ -29,7 +29,7 @@ def estimate_random_forest(train_lr, train_hr):
     bootstrap = hp.choice('bootstrap', [True, False])
 
     estim = HyperoptEstimator(regressor=random_forest_regression(
-        'my_forest', n_estimators=n_estimators, max_depth=max_depth, max_features='sqrt', min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, bootstrap=False), preprocessing=min_max_scaler, max_evals=25, trial_timeout=10800)
+        'my_forest', n_estimators=n_estimators, max_depth=max_depth, max_features='sqrt', min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, bootstrap=False), preprocessing=[min_max_scaler('my_scaler')], max_evals=25, trial_timeout=10800)
     estim.fit(train_lr, train_hr)
 
     return estim.best_model()
@@ -87,5 +87,5 @@ def calculate_gaussian(train_lr):
 
 if __name__ == "__main__":
     train_lr, train_hr = utils.load_training_data()
-    best_model = estimate_reg_tree(train_lr, train_hr)
+    best_model = estimate_random_forest(train_lr, train_hr)
     print(best_model)
