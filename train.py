@@ -1,13 +1,15 @@
 """A script that trains a model for IQT random forest
 using previously created dataset.
 """
+import os
+os.environ['OMP_NUM_THREADS'] = '1'
+
 from hpsklearn.components import _trees_min_samples_leaf
 import utils
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
+
 from sklearn.ensemble import RandomForestRegressor
 from hyperopt.pyll.stochastic import sample
 from hyperopt.pyll.base import scope
@@ -15,8 +17,7 @@ from hyperopt import hp
 from hpsklearn import HyperoptEstimator, random_forest_regression, decision_tree
 import numpy as np
 import pickle
-import os
-os.environ['OMP_NUM_THREADS'] = '1'
+
 
 
 def estimate_random_forest(train_lr, train_hr):
@@ -45,18 +46,6 @@ def estimate_reg_tree(train_lr, train_hr):
     estim.fit(train_lr, train_hr)
 
     return estim.best_model()
-
-
-def train_iterative_imputer(train_lr):
-    print("Training the imputer...")
-    imputer = IterativeImputer(max_iter=10, random_state=0)
-    imputer = imputer.fit(train_lr)
-
-    # save the imputer
-    with open('models/imputer.pickle', 'wb') as handle:
-        pickle.dump(imputer, handle)
-
-    return imputer
 
 
 def train_lin_reg(train_lr, train_hr):
