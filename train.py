@@ -6,8 +6,8 @@ import utils
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
-from sklearn.impute import IterativeImputer
 from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestRegressor
 from hyperopt.pyll.stochastic import sample
 from hyperopt.pyll.base import scope
