@@ -2,6 +2,8 @@
 using previously created dataset.
 """
 import pickle
+import os
+os.environ['OMP_NUM_THREADS'] = '1'
 
 import numpy as np
 from hpsklearn import HyperoptEstimator, random_forest_regression
@@ -16,7 +18,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.tree import DecisionTreeRegressor
 
 import utils
-import os
+
 
 def estimate_random_forest(train_lr, train_hr):
     n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 20, 1)))
@@ -24,9 +26,7 @@ def estimate_random_forest(train_lr, train_hr):
     max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
     bootstrap = hp.choice('bootstrap', [True, False])
 
-    estim = HyperoptEstimator(regressor=random_forest_regression('my_forest', n_estimators=n_estimators,
-                                                                 max_depth=max_depth, max_features=max_features, bootstrap=bootstrap),
-                              max_evals=40, trial_timeout=10800)
+    estim = HyperoptEstimator(regressor=random_forest_regression('my_forest'), max_evals=40, trial_timeout=10800)
     estim.fit(train_lr, train_hr)
 
     print(estim.best_model())
@@ -101,16 +101,5 @@ def calculate_gaussian(train_lr):
 
 
 if __name__ == "__main__":
-    os.environ['OMP_NUM_THREADS'] = '1'
-
     train_lr, train_hr = utils.load_training_data()
-    # ran_forest = train_ran_forest(train_lr, train_hr)
-
-    # test_lr, test_hr = utils.load_testing_data()
-
-    # print("Calculating error")
-    # prediction = ran_forest.predict(test_lr)
-    # rmse = mean_squared_error(test_hr, prediction, squared=False)
-    # print("Score:", rmse)
-
-    ran_forest = estimate_random_forest(train_lr, train_hr)
+    best_model = estimate_random_forest(train_lr, train_hr)

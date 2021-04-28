@@ -25,6 +25,11 @@ input_radius = 2
 datasample_rate = 1  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
 no_rnds = 8  # no of separate training sets to be created
 
+subjects_train = ["115724", "688569", "137431",
+                  "757764", "206828", "145632", "516742", "211417"]
+subjects_test = ["175136", "180230", "468050",
+                 "902242", "886674", "962058", "103212", "792867"]
+
 
 def compute_dti_respairs(subject):
     """ Computes DTIs on the original DWIs and its downsampled version and saves them to a file.
@@ -115,7 +120,7 @@ def compute_patchlib(subject):
             for z in range(n, dims[2] - n):
 
                 p_mask = mask_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
-                
+
                 # save location if the cubic patch is contained within the brain
                 if np.all(p_mask):
                     c_indices_lr_features.append((x, y, z))
@@ -131,7 +136,7 @@ def compute_patchlib(subject):
     n_pairs = len(indices_lr_features)
     lr_size = 2*n + 1
 
-    print("Extracting " + str(n_pairs) +" patch pairs...")
+    print("Extracting " + str(n_pairs) + " patch pairs...")
     tensors_hr = tensor_file_hr['tensors_hr']
     tensors_lr = tensor_file_lr['tensors_lr']
 
@@ -216,11 +221,8 @@ def create_dataset(subjects, name):
     np.savez_compressed("preprocessed_data/" + name + ".npz", patches_lr=all_patches_lr,
                         patches_hr=all_patches_hr)
 
+
 if __name__ == "__main__":
-    subjects_train = ["115724", "688569", "137431",
-                    "757764", "206828", "145632", "516742", "211417"]
-    subjects_test = ["175136", "180230", "468050",
-                    "902242", "886674", "962058", "103212", "792867"]
 
     for subject in subjects_test:
         compute_patchlib(subject)
