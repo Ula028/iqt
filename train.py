@@ -1,6 +1,7 @@
 """A script that trains a model for IQT random forest
 using previously created dataset.
 """
+from hpsklearn.components import _trees_min_samples_leaf
 import utils
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
@@ -11,7 +12,7 @@ from sklearn.ensemble import RandomForestRegressor
 from hyperopt.pyll.stochastic import sample
 from hyperopt.pyll.base import scope
 from hyperopt import hp
-from hpsklearn import HyperoptEstimator, random_forest_regression
+from hpsklearn import HyperoptEstimator, random_forest_regression, decision_tree
 import numpy as np
 import pickle
 import os
@@ -28,11 +29,20 @@ def estimate_random_forest(train_lr, train_hr):
         'my_forest', n_estimators=n_estimators, max_depth=max_depth, max_features='sqrt'), max_evals=20, trial_timeout=10800)
     estim.fit(train_lr, train_hr)
 
-    print(estim.best_model())
+    return estim.best_model()
 
-    # save the best model
-    with open('models/ran_forest_model.pickle', 'wb') as handle:
-        pickle.dump(estim.best_model(), handle)
+
+def estimate_reg_tree(train_lr, train_hr):
+    max_depth = sample(scope.int(hp.quniform('max_depth', 30, 70, 1)))
+    max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
+    min_samples_split = sample(
+        scope.int(hp.quniform('min_samples_split', 1, 40, 1)))
+    min_samples_leaf = sample(
+        scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
+
+    estim = HyperoptEstimator(regressor=decision_tree(
+        'my_tree', max_depth=max_depth, max_features=max_features, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf), max_evals=25, trial_timeout=10800)
+    estim.fit(train_lr, train_hr)
 
     return estim.best_model()
 
@@ -101,4 +111,5 @@ def calculate_gaussian(train_lr):
 
 if __name__ == "__main__":
     train_lr, train_hr = utils.load_training_data()
-    best_model = estimate_random_forest(train_lr, train_hr)
+    best_model = estimate_reg_tree(train_lr, train_hr)
+    print(best_model)
