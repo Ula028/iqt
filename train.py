@@ -4,45 +4,32 @@ using previously created dataset.
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
 
-from hpsklearn.components import _trees_min_samples_leaf
 import utils
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
-
 from sklearn.ensemble import RandomForestRegressor
 from hyperopt.pyll.stochastic import sample
 from hyperopt.pyll.base import scope
 from hyperopt import hp
-from hpsklearn import HyperoptEstimator, random_forest_regression, decision_tree
+from hpsklearn import HyperoptEstimator, random_forest_regression, min_max_scaler
 import numpy as np
 import pickle
 
 
-
 def estimate_random_forest(train_lr, train_hr):
-    n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 20, 1)))
-    max_depth = sample(scope.int(hp.quniform('max_depth', 30, 70, 1)))
-    max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
-    bootstrap = hp.choice('bootstrap', [True, False])
-
-    estim = HyperoptEstimator(regressor=random_forest_regression(
-        'my_forest', n_estimators=n_estimators, max_depth=max_depth, max_features='sqrt'), max_evals=20, trial_timeout=10800)
-    estim.fit(train_lr, train_hr)
-
-    return estim.best_model()
-
-
-def estimate_reg_tree(train_lr, train_hr):
-    max_depth = sample(scope.int(hp.quniform('max_depth', 30, 70, 1)))
-    max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
+    n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 14, 1)))
+    max_depth = sample(scope.int(hp.quniform('max_depth', 40, 50, 1)))
     min_samples_split = sample(
         scope.int(hp.quniform('min_samples_split', 1, 40, 1)))
     min_samples_leaf = sample(
         scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
+    max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
+    bootstrap = hp.choice('bootstrap', [True, False])
 
-    estim = HyperoptEstimator(regressor=decision_tree(
-        'my_tree', max_depth=max_depth, max_features=max_features, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf), max_evals=25, trial_timeout=10800)
+    estim = HyperoptEstimator(regressor=random_forest_regression(
+        'my_forest', n_estimators=n_estimators, max_depth=max_depth, max_features='sqrt', min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, bootstrap=False), preprocessing=min_max_scaler, max_evals=25, trial_timeout=10800)
     estim.fit(train_lr, train_hr)
 
     return estim.best_model()
