@@ -150,3 +150,8 @@ def load_training_data():
     print("Train patches_lr shape:", patches_lr.shape)
     print("Train patches_hr shape:", patches_hr.shape)
     return patches_lr, patches_hr
+
+def load_scaler():
+    with open('models/min_max_scaler.pickle', 'rb') as handle:
+        scaler = pickle.load(handle)
+    return scaler
