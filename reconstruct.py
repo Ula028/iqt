@@ -18,9 +18,10 @@ rec_boundary = False  # use boundary reconstruction
 # use KNNImputer to fill missing values in partial patches (otherwise use conditional mean)
 imputer_name = 'conditional'  # iterative, conditional
 model_name = 'ran_forest'  # 'reg_tree'
+scaler = True 
 
-subjects_test = ["175136", "180230", "468050",
-                 "902242", "886674", "962058", "103212", "792867"]
+subjects_test = ["175136", "180230", "468050","902242", "886674", "962058", "103212", "792867"]
+                 
 
 
 def load_subject_data(subject):
@@ -73,7 +74,7 @@ def preprocess_data(tensors_lr):
     return all_indices, tensors_lr, target_resolution
 
 
-def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, model_name, imputer_name):
+def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, model_name, imputer_name, scaler):
     n = input_radius
     m = upsample_rate
 
@@ -95,6 +96,9 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, mo
             mean = utils.load_mean()
             covariance = utils.load_covariance()
 
+    if scaler:
+        sc = utils.load_scaler()
+    
     all_predictions = np.zeros(target_res)
     dim1, dim2, dim3, dim4, dim5 = target_res
     predictions_mask = np.full((dim1, dim2, dim3), False)
@@ -134,6 +138,8 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, mo
 
         if to_predict:
             patch = patch.flatten().reshape(1, -1)
+            if scaler:
+                sc.transform(patch)
             prediction = model.predict(patch)
             prediction = np.reshape(prediction, (m, m, m, 6))
 
@@ -199,7 +205,7 @@ if __name__ == "__main__":
 
         # reconstruct the diffusion tensors
         reconstructed_tensors, reconstructed_tensors_mask = reconstruct(subject,
-                                                                        all_indices, lr_patches, mask_lr, target_resolution, model, model_name, imputer_name)
+                                                                        all_indices, lr_patches, mask_lr, target_resolution, model, model_name, imputer_name, scaler)
 
         # load previously fitted DTIs
         tensor_file_hr = np.load(
