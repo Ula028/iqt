@@ -16,6 +16,8 @@ bvecs_fname = "bvecs"
 grad_file = "grad_dev.nii.gz"
 upsample_rate = 2  # the super-resolution factor (m in paper)
 
+subjects_test = ["175136", "180230", "468050",
+                 "902242", "886674", "962058", "103212", "792867"]
 
 def linear_interpolation(subject):
     """ Computes DTIs from DWI upsampled by linear interpolation.
@@ -63,15 +65,15 @@ def linear_interpolation(subject):
     evecs_hr = tenfit_hr.evecs
     print("High resolutions tensors:", quadratic_tensors_hr.shape)
     # save DTIs, eigenvectors, eigenvalues and mask to a file
-    filename = "preprocessed_data" + subject + "inter_tensors_hr.npz"
+    filename = "reconstructed/inter" + subject + "tensors.npz"
     np.savez_compressed(filename, tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
                         evals_hr=evals_hr, evecs_hr=evecs_hr)
 
     return quadratic_tensors_hr
 
 
-subject = "175136"
-tensors_interpolated = linear_interpolation(subject)
+for subject in subjects_test:
+    tensors_interpolated = linear_interpolation(subject)
 
 # load previously fitted DTIs
 tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
