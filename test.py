@@ -8,7 +8,7 @@ from utils import load_rand_forest_model
 subjects_test = ["175136", "180230", "468050",
                  "902242", "886674", "962058", "103212", "792867"]
 
-model_name = 'lin_reg'  # cubic interpolation, lin_reg, reg_tree, ran_forest
+model_name = 'ran_forest'  # cubic interpolation, lin_reg, reg_tree, ran_forest
 
 
 def subject_dt_rmse(subject, model_name):
@@ -44,11 +44,14 @@ def subject_dt_rmse(subject, model_name):
     tensors_rec = np.reshape(tensors_rec, (new_size[0]*new_size[1]*new_size[2], 6)).T
     mask = mask.flatten()
 
-    rmse = mean_squared_error(tensors_hr[:, mask],
-                              tensors_rec[:, mask], squared=False, multioutput='raw_values')
-    dt_rmse = np.median(rmse)
+    # calculate dt_rmse for a subject
+    squared_diff = np.square(tensors_rec[:, mask] - tensors_hr[:, mask])
+    summed = np.sum(squared_diff, axis=0)
+    square_root = np.sqrt(summed)
+    median = np.median(square_root)
+    print("Median for subject " + subject + ": " + str(median))
     
-    return dt_rmse
+    return median
 
 def total_dt_rmse(model_name):
     results = []
