@@ -6,6 +6,7 @@ from dipy.io.gradients import read_bvals_bvecs
 from dipy.io.image import load_nifti
 from dipy.segment.mask import median_otsu
 from sklearn.metrics import mean_squared_error
+from tqdm import tqdm
 
 import utils
 
@@ -74,5 +75,5 @@ def linear_interpolation(subject):
     return quadratic_tensors_hr
 
 
-for subject in subjects_test:
-    tensors_interpolated = linear_interpolation(subject)
+for subject in tqdm(subjects_test):
+    linear_interpolation(subject)
