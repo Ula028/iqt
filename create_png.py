@@ -1,15 +1,14 @@
-from dipy.viz import window, actor
-from dipy.data import get_sphere
-from dipy.reconst.dti import fractional_anisotropy, color_fa
-
 import numpy as np
-import pickle
+from dipy.data import get_sphere
+from dipy.reconst.dti import color_fa, fractional_anisotropy
+from dipy.viz import actor, window
 
+from reconstruct import reconstruct
 
 if __name__ == "__main__":
 
     subject = '175136'
-    which = 'hr'
+    which = 'lin_reg'
 
     if which == 'hr':
         # load previously fitted DTIs
@@ -19,11 +18,11 @@ if __name__ == "__main__":
         # get original hr eigenvalues and eigenvectors
         evals = tensor_file_hr['evals_hr']
         evecs = tensor_file_hr['evecs_hr']
-    
+
     elif which == 'lr':
         # load previously fitted DTIs
         tensor_file_hr = np.load(
-            "preprocessed_data/" + subject + "tensors_lr.npz")
+            "preprocessed_data/" + subject + "tensors.npz")
 
         # get original hr eigenvalues and eigenvectors
         evals = tensor_file_hr['evals_lr']
@@ -31,36 +30,39 @@ if __name__ == "__main__":
 
     elif which == 'interpolation':
         # load interpolated DTIs
-        tensor_file_inter = np.load("reconstructed/" + subject + "inter_tensors_hr.npz")
+        tensor_file_inter = np.load(
+            "reconstructed/" + subject + "inter_tensors.npz")
 
         # get original eigenvalues and eigenvectors
         evals = tensor_file_inter['evals_hr']
         evecs = tensor_file_inter['evecs_hr']
 
-
-    
     elif which == 'lin_reg':
         # load reconstructed DTIs
-        with open('reconstructed/lin_reg' + subject + 'rec_tensors.pickle', 'rb') as handle:
-            reconstruction = pickle.load(handle)
+        file = np.load('reconstructed/' + subject + 'lin_reg_tensors.npz', 'rb')
+        reconstruction = file['tensors_rec']
 
         # get reconstructed hr eigenvalues and eigenvectors
         evals, evecs = np.linalg.eigh(reconstruction[:, :, :], UPLO="U")
         evals = evals[:, :, :, ::-1]
         evecs = evecs[:, :, :, :, ::-1]
 
-    elif which == 'lin_reg':
+    elif which == 'ran_forest':
         # load reconstructed DTIs
-        with open('reconstructed/' + subject + 'rec_tensors_hr.pickle', 'rb') as handle:
-            reconstruction = pickle.load(handle)
+        file = np.load('reconstructed/' + subject + 'ran_forest_tensors.npz', 'rb')
+        reconstruction = file['tensors_rec']
 
         # get reconstructed hr eigenvalues and eigenvectors
         evals, evecs = np.linalg.eigh(reconstruction[:, :, :], UPLO="U")
         evals = evals[:, :, :, ::-1]
         evecs = evecs[:, :, :, :, ::-1]
 
-    
     # create png image
+    
+    # rotate image
+    # evals = np.rot90(evals, k=1, axes=(2, 0))
+    # evecs = np.rot90(evecs, k=1, axes=(2, 0))
+    
     FA = fractional_anisotropy(evals)
 
     FA = np.clip(FA, 0, 1)
