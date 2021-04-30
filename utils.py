@@ -143,9 +143,9 @@ def load_testing_data():
     print("Test patches_hr shape:", patches_hr.shape)
     return patches_lr, patches_hr
 
-def load_training_data():
+def load_training_data(datasample_rate):
     print("Loading training data...")
-    dict_data = np.load('preprocessed_data/train_data.npz')
+    dict_data = np.load('preprocessed_data/train_data' + str(datasample_rate) + '.npz')
     patches_lr = dict_data['patches_lr']
     patches_hr = dict_data['patches_hr']
     print("Train patches_lr shape:", patches_lr.shape)
