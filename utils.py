@@ -102,8 +102,9 @@ def load_reg_tree_model():
     return reg_tree
 
 
-def load_rand_forest_model():
-    with open('models/ran_forest_model.pickle', 'rb') as handle:
+def load_rand_forest_model(version=''):
+    path = 'models/ran_forest_model' + version + '.pickle'
+    with open(path, 'rb') as handle:
         reg_forest = pickle.load(handle)
     return reg_forest
 
