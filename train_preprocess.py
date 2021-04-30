@@ -22,7 +22,7 @@ grad_file = "grad_dev.nii.gz"
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
 input_radius = 2
-datasample_rate = 1  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
+datasample_rate = 2  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
 no_rnds = 8  # no of separate training sets to be created
 
 subjects_train = ["115724", "688569", "137431",
@@ -175,9 +175,9 @@ def compute_patchlib(subject):
 
     if datasample_rate > 1:
         # keep a random sample
-        n_samples = int(np.floor(s_lr[0] / datasample_rate))
+        n_samples = int(np.floor(n_pairs / datasample_rate))
         sample = np.random.choice(
-            range(s_lr[0]), size=n_samples, replace=False)
+            range(n_pairs), size=n_samples, replace=False)
 
         lr_patches = lr_patches[sample, :]
         hr_patches = hr_patches[sample, :]
@@ -224,9 +224,12 @@ def create_dataset(subjects, name):
 
 if __name__ == "__main__":
 
-    for subject in subjects_test:
-        compute_patchlib(subject)
+    # for subject in subjects_test:
+    #     compute_patchlib(subject)
+    # create_dataset(subjects_test, "test_data")
 
+    # for subject in subjects_train:
+    #     compute_patchlib(subject)
     create_dataset(subjects_train, "train_data")
-    create_dataset(subjects_test, "test_data")
+    
     gc.collect()
