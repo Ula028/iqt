@@ -9,9 +9,9 @@ import pickle
 if __name__ == "__main__":
 
     subject = '175136'
-    which = 'original'
+    which = 'hr'
 
-    if which == 'original':
+    if which == 'hr':
         # load previously fitted DTIs
         tensor_file_hr = np.load(
             "preprocessed_data/" + subject + "tensors_hr.npz")
@@ -19,6 +19,15 @@ if __name__ == "__main__":
         # get original hr eigenvalues and eigenvectors
         evals = tensor_file_hr['evals_hr']
         evecs = tensor_file_hr['evecs_hr']
+    
+    elif which == 'lr':
+        # load previously fitted DTIs
+        tensor_file_hr = np.load(
+            "preprocessed_data/" + subject + "tensors_lr.npz")
+
+        # get original hr eigenvalues and eigenvectors
+        evals = tensor_file_hr['evals_lr']
+        evecs = tensor_file_hr['evecs_lr']
 
     elif which == 'interpolation':
         # load interpolated DTIs
@@ -28,7 +37,19 @@ if __name__ == "__main__":
         evals = tensor_file_inter['evals_hr']
         evecs = tensor_file_inter['evecs_hr']
 
-    else:
+
+    
+    elif which == 'lin_reg':
+        # load reconstructed DTIs
+        with open('reconstructed/lin_reg' + subject + 'rec_tensors.pickle', 'rb') as handle:
+            reconstruction = pickle.load(handle)
+
+        # get reconstructed hr eigenvalues and eigenvectors
+        evals, evecs = np.linalg.eigh(reconstruction[:, :, :], UPLO="U")
+        evals = evals[:, :, :, ::-1]
+        evecs = evecs[:, :, :, :, ::-1]
+
+    elif which == 'lin_reg':
         # load reconstructed DTIs
         with open('reconstructed/' + subject + 'rec_tensors_hr.pickle', 'rb') as handle:
             reconstruction = pickle.load(handle)
@@ -38,6 +59,7 @@ if __name__ == "__main__":
         evals = evals[:, :, :, ::-1]
         evecs = evecs[:, :, :, :, ::-1]
 
+    
     # create png image
     FA = fractional_anisotropy(evals)
 
