@@ -20,17 +20,17 @@ import pickle
 
 
 def estimate_random_forest(train_lr, train_hr):
-    n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 14, 1)))
-    max_depth = sample(scope.int(hp.quniform('max_depth', 40, 50, 1)))
-    min_samples_split = sample(
-        scope.int(hp.quniform('min_samples_split', 1, 40, 1)))
-    min_samples_leaf = sample(
-        scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
-    max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
-    bootstrap = hp.choice('bootstrap', [True, False])
+    # n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 14, 1)))
+    # max_depth = sample(scope.int(hp.quniform('max_depth', 40, 50, 1)))
+    # min_samples_split = sample(
+    #     scope.int(hp.quniform('min_samples_split', 1, 40, 1)))
+    # min_samples_leaf = sample(
+    #     scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
+    # max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
+    # bootstrap = hp.choice('bootstrap', [True, False])
 
-    estim = HyperoptEstimator(algo=tpe.suggest, regressor=random_forest_regression(
-        'my_forest', n_estimators=n_estimators, max_depth=max_depth, max_features='sqrt', min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, bootstrap=False), preprocessing=[min_max_scaler('my_scaler')], max_evals=25, trial_timeout=10800)
+    estim = HyperoptEstimator(algo=tpe.suggest, regressor=random_forest_regression('my_forest', bootstrap=False),
+                              preprocessing=[], max_evals=20, trial_timeout=10800)
     estim.fit(train_lr, train_hr)
 
     return estim.best_model()
@@ -61,8 +61,8 @@ def train_reg_tree(train_lr, train_hr):
 def train_ran_forest(train_lr, train_hr):
     print("Training the decision tree regressor...")
     # ran_forest = RandomForestRegressor(n_estimators=10, max_depth=43, min_samples_split=11, min_samples_leaf=19, max_features='sqrt', bootstrap=False).fit(train_lr, train_hr)
-
-    ran_forest = RandomForestRegressor(n_estimators=100, max_depth=50, max_features='sqrt', bootstrap=True, n_jobs=-1).fit(train_lr, train_hr)
+    ran_forest = RandomForestRegressor(n_estimators=12, max_depth=25, min_samples_split=10, min_samples_leaf=3, max_features='sqrt', bootstrap=False, n_jobs=-1, random_state=2).fit(train_lr, train_hr)
+    # ran_forest = RandomForestRegressor(n_estimators=100, max_depth=50, max_features='sqrt', bootstrap=True, n_jobs=-1).fit(train_lr, train_hr)
 
     # save the model
     with open('models/ran_forest_model.pickle', 'wb') as handle:
@@ -98,7 +98,6 @@ def calculate_gaussian(train_lr):
 
 
 if __name__ == "__main__":
-    train_lr, train_hr = utils.load_training_data()
-    # scaler = utils.load_scaler()  
-    # scaler.transform(train_lr)
-    ran_forest = train_ran_forest(train_lr, train_hr)
+    train_lr, train_hr = utils.load_training_data(50)
+    estimation = estimate_random_forest(train_lr, train_hr)
+    print(estimation)
