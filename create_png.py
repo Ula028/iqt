@@ -60,8 +60,8 @@ if __name__ == "__main__":
     # create png image
     
     # rotate image
-    # evals = np.rot90(evals, k=1, axes=(2, 0))
-    # evecs = np.rot90(evecs, k=1, axes=(2, 0))
+    # evals = np.rot90(evals, k=1, axes=(0, 2))
+    # evecs = np.rot90(evecs, k=1, axes=(0, 2))
     
     FA = fractional_anisotropy(evals)
 
@@ -75,9 +75,12 @@ if __name__ == "__main__":
     cfa = RGB
     cfa /= cfa.max()
 
+    print("Creating png...")
     scene.add(actor.tensor_slicer(evals, evecs, scalar_colors=cfa, sphere=sphere,
                                   scale=0.3))
 
     path = 'images/' + subject + 'tensor_ellipsoids_' + which + '.png'
+    print("Saving png: " + path)
+     
     window.record(scene, n_frames=1, out_path=path,
                   size=(1200, 1200))
