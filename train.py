@@ -1,8 +1,6 @@
 """A script that trains a model for IQT random forest
 using previously created dataset.
 """
-import os
-os.environ['OMP_NUM_THREADS'] = '1'
 
 import utils
 from sklearn.preprocessing import MinMaxScaler
@@ -15,6 +13,9 @@ from hyperopt.pyll.base import scope
 from hyperopt import hp, tpe
 from hpsklearn import HyperoptEstimator, random_forest_regression, min_max_scaler
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.feature_selection import SequentialFeatureSelector
+from scipy.stats import randint
 import numpy as np
 import pickle
 
@@ -28,56 +29,72 @@ def estimate_random_forest(train_lr, train_hr):
     #     scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
     # max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
     # bootstrap = hp.choice('bootstrap', [True, False])
-
+    
+    evals = 20
     estim = HyperoptEstimator(algo=tpe.suggest, regressor=random_forest_regression('my_forest', bootstrap=False),
-                              preprocessing=[], max_evals=20, trial_timeout=10800)
+                              preprocessing=[], max_evals=evals, trial_timeout=10800)
     estim.fit(train_lr, train_hr)
 
     return estim.best_model()
 
-
-def train_lin_reg(train_lr, train_hr):
+def find_reg_tree(train_lr, train_hr):
+    reg_tree = DecisionTreeRegressor(max_features='sqrt').fit(train_lr, train_hr)
+    
+    param_dist = {"max_depth": randint(20, 150),
+                "min_samples_split": randint(5, 50),
+                "min_samples_leaf": randint(1, 25)}
+    
+    n_iter_search = 50
+    random_search = RandomizedSearchCV(reg_tree, param_distributions=param_dist, n_iter=n_iter_search)
+    random_search.fit(train_lr, train_hr)
+    
+    return random_search.best_estimator_
+    
+    
+def train_lin_reg(train_lr, train_hr, datasample_rate):
     print("Training the linear regression model...")
     lin_reg = LinearRegression().fit(train_lr, train_hr)
 
     # save the model
-    with open('models/lin_reg_model.pickle', 'wb') as handle:
+    with open('models/lin_reg_model' + str(datasample_rate) + '.pickle', 'wb') as handle:
         pickle.dump(lin_reg, handle)
 
     return lin_reg
 
 
-def train_reg_tree(train_lr, train_hr):
+def train_reg_tree(train_lr, train_hr, datasample_rate):
     print("Training the decision tree regressor...")
-    reg_tree = DecisionTreeRegressor(criterion='mse').fit(train_lr, train_hr)
+    reg_tree = DecisionTreeRegressor(
+        max_depth=25, max_features='sqrt').fit(train_lr, train_hr)
 
     # save the model
-    with open('models/reg_tree_model.pickle', 'wb') as handle:
+    with open('models/reg_tree_model' + str(datasample_rate) + '.pickle', 'wb') as handle:
         pickle.dump(reg_tree, handle)
 
     return reg_tree
 
 
-def train_ran_forest(train_lr, train_hr):
+def train_ran_forest(train_lr, train_hr, datasample_rate):
     print("Training the decision tree regressor...")
-    # ran_forest = RandomForestRegressor(n_estimators=10, max_depth=43, min_samples_split=11, min_samples_leaf=19, max_features='sqrt', bootstrap=False).fit(train_lr, train_hr)
-    ran_forest = RandomForestRegressor(n_estimators=12, max_depth=25, min_samples_split=10, min_samples_leaf=3, max_features='sqrt', bootstrap=False, n_jobs=-1, random_state=2).fit(train_lr, train_hr)
-    # ran_forest = RandomForestRegressor(n_estimators=100, max_depth=50, max_features='sqrt', bootstrap=True, n_jobs=-1).fit(train_lr, train_hr)
+    ran_forest = RandomForestRegressor(bootstrap=False, max_features=0.34095235168974203,
+                                       n_estimators=216, n_jobs=-1,
+                                       random_state=3, verbose=False).fit(train_lr, train_hr)
 
     # save the model
-    with open('models/ran_forest_model.pickle', 'wb') as handle:
+    with open('models/ran_forest_model' + str(datasample_rate) + '.pickle', 'wb') as handle:
         pickle.dump(ran_forest, handle)
 
     return ran_forest
 
+
 def fit_scaler(train_lr):
     scaler = MinMaxScaler()
     scaler.fit(train_lr)
-    
+
     # save the scaler
     with open('models/min_max_scaler.pickle', 'wb') as handle:
         pickle.dump(scaler, handle)
-        
+
     return scaler
 
 
@@ -98,6 +115,6 @@ def calculate_gaussian(train_lr):
 
 
 if __name__ == "__main__":
-    train_lr, train_hr = utils.load_training_data(50)
-    estimation = estimate_random_forest(train_lr, train_hr)
-    print(estimation)
+    rate = 1
+    train_lr, train_hr = utils.load_training_data(rate)
+    lin_reg = train_lin_reg(train_lr, train_hr, rate)
