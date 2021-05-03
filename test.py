@@ -8,10 +8,8 @@ from utils import load_rand_forest_model
 subjects_test = ["175136", "180230", "468050",
                  "902242", "886674", "962058", "103212", "792867"]
 
-model_name = 'inter'  # inter, lin_reg, reg_tree, ran_forest
 
-
-def subject_dt_rmse(subject, model_name):
+def subject_dt_rmse(subject, model_name, rate):
 
     # load previously fitted hr DTIs
     tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
@@ -19,7 +17,7 @@ def subject_dt_rmse(subject, model_name):
 
     # load reconstructed hr DTIs
     tensor_file_rec = np.load(
-        'reconstructed/' + subject + model_name + '_tensors.npz')
+        'reconstructed/' + subject + model_name + str(rate) + '_tensors.npz')
     if model_name == 'inter':
         tensors_rec = tensor_file_rec['tensors_hr']
         mask = tensor_file_rec['mask_hr']
@@ -57,13 +55,15 @@ def subject_dt_rmse(subject, model_name):
     
     return median
 
-def total_dt_rmse(model_name):
+def total_dt_rmse(model_name, rate):
     results = []
     for subject in subjects_test:
-        results.append(subject_dt_rmse(subject, model_name))
+        results.append(subject_dt_rmse(subject, model_name, rate))
     
     return np.mean(results), np.std(results)
 
 if __name__ == "__main__":
 
-    print(total_dt_rmse(model_name))
+    rate = 25
+    model_name = 'lin_reg'  # inter, lin_reg, reg_tree, ran_forest
+    print(total_dt_rmse(model_name, rate))
