@@ -90,20 +90,20 @@ def complete_patch_imputer(p_mask, p_patch, imputer):
     return patch
 
 
-def load_linear_model():
-    with open('models/lin_reg_model.pickle', 'rb') as handle:
+def load_linear_model(datasample_rate):
+    with open('models/lin_reg_model' + str(datasample_rate) + '.pickle', 'rb') as handle:
         lin_reg = pickle.load(handle)
     return lin_reg
 
 
-def load_reg_tree_model():
-    with open('models/reg_tree_model.pickle', 'rb') as handle:
+def load_reg_tree_model(datasample_rate):
+    with open('models/reg_tree_model' + str(datasample_rate) + '.pickle', 'rb') as handle:
         reg_tree = pickle.load(handle)
     return reg_tree
 
 
-def load_rand_forest_model(version=''):
-    path = 'models/ran_forest_model' + version + '.pickle'
+def load_rand_forest_model(datasample_rate):
+    path = 'models/ran_forest_model' + str(datasample_rate) + '.pickle'
     with open(path, 'rb') as handle:
         reg_forest = pickle.load(handle)
     return reg_forest
