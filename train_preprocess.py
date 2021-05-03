@@ -22,8 +22,7 @@ grad_file = "grad_dev.nii.gz"
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
 input_radius = 2
-datasample_rate = 2  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
-no_rnds = 8  # no of separate training sets to be created
+datasample_rate = 10  # determines the size of training sets. From each subject, we randomly draw patches with probability 1/datasample_rate
 
 subjects_train = ["115724", "688569", "137431",
                   "757764", "206828", "145632", "516742", "211417"]
@@ -226,10 +225,10 @@ if __name__ == "__main__":
 
     # for subject in subjects_test:
     #     compute_patchlib(subject)
-    # create_dataset(subjects_test, "test_data")
+    # create_dataset(subjects_test, "test_data" + str(datasample_rate))
 
-    # for subject in subjects_train:
-    #     compute_patchlib(subject)
-    create_dataset(subjects_train, "train_data")
+    for subject in subjects_train:
+        compute_patchlib(subject)
+    create_dataset(subjects_train, "train_data" + str(datasample_rate))
     
     gc.collect()
