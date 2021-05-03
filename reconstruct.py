@@ -14,14 +14,9 @@ import utils
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
 input_radius = 2
-rec_boundary = False  # use boundary reconstruction
-# use KNNImputer to fill missing values in partial patches (otherwise use conditional mean)
-imputer_name = 'conditional'  # iterative, conditional
-model_name = 'ran_forest'  # 'reg_tree'
-scaler = True 
 
-subjects_test = ["175136", "180230", "468050","902242", "886674", "962058", "103212", "792867"]
-                 
+subjects_test = ["175136", "180230", "468050",
+                 "902242", "886674", "962058", "103212", "792867"]
 
 
 def load_subject_data(subject):
@@ -74,9 +69,12 @@ def preprocess_data(tensors_lr):
     return all_indices, tensors_lr, target_resolution
 
 
-def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, model_name, imputer_name, scaler):
+def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, model_name, rate, imputer_name):
     n = input_radius
     m = upsample_rate
+    min_present = 0.7
+    min_input_size = int(np.floor((2*n + 1) ** 3 * min_present))
+    count = 0
 
     # load models for boundary reconstruction
     if rec_boundary:
@@ -96,9 +94,6 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, mo
             mean = utils.load_mean()
             covariance = utils.load_covariance()
 
-    if scaler:
-        sc = utils.load_scaler()
-    
     all_predictions = np.zeros(target_res)
     dim1, dim2, dim3, dim4, dim5 = target_res
     predictions_mask = np.full((dim1, dim2, dim3), False)
@@ -117,14 +112,17 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, mo
         to_predict = False
 
         p_mask = mask_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
+        elem_present = np.count_nonzero(p_mask)
 
+        # print("Nonzero:", np.count_nonzero(p_mask))
         # use the patch if it is fully contained in the brain
         if np.all(p_mask):
             patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
             to_predict = True
 
         # patch is partially contained in the brain and boundary reconstruction is on
-        elif rec_boundary and p_mask[n, n, n] == True:
+        elif rec_boundary and p_mask[n, n, n] and elem_present >= min_input_size:
+            print("in boudnary")
             if imputer_name == 'iterative' or imputer_name == 'knn':
                 # fill the patch using the imputer
                 p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
@@ -135,12 +133,12 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, mo
                 patch = utils.complete_patch_mean(
                     p_mask, p_patch, mean, covariance)
             to_predict = True
+            count += 1
 
         if to_predict:
             patch = patch.flatten().reshape(1, -1)
-            if scaler:
-                sc.transform(patch)
             prediction = model.predict(patch)
+
             prediction = np.reshape(prediction, (m, m, m, 6))
 
             for xc, plane in enumerate(prediction):
@@ -156,9 +154,9 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, mo
     print("Predictions shape:", all_predictions.shape)
     print("Target shape:", target_res)
     image = np.reshape(all_predictions, target_res)
-    
+
     # save the reconstructed DTIs
-    filename = 'reconstructed/' + subject + model_name + '_tensors.npz'
+    filename = 'reconstructed/' + subject + model_name + str(rate) + '_tensors.npz'
     np.savez_compressed(filename, tensors_rec=image, mask_rec=predictions_mask)
 
     return image, predictions_mask
@@ -182,19 +180,24 @@ def masked_rmse(original_hr, reconst_hr, reconst_mask):
 
 
 if __name__ == "__main__":
+    
+    rec_boundary = False  # use boundary reconstruction
+    imputer_name = 'conditional'  # iterative, conditional
+    model_name = 'lin_reg'  # reg_tree, ran_forest, lin_reg
+    rate = 10
 
     starttime = timeit.default_timer()
-    
+
     # load the model
     if model_name == 'lin_reg':
-        model = utils.load_linear_model()
+        model = utils.load_linear_model(rate)
     elif model_name == 'reg_tree':
-        model = utils.load_reg_tree_model()
+        model = utils.load_reg_tree_model(rate)
     else:
-        model = utils.load_rand_forest_model()
+        model = utils.load_rand_forest_model(rate)
 
-    for subject in subjects_test:
-        
+    for subject in tqdm(subjects_test):
+
         print()
         print("RECONSTRUCTION FOR SUBJECT:", subject)
 
@@ -205,7 +208,7 @@ if __name__ == "__main__":
 
         # reconstruct the diffusion tensors
         reconstructed_tensors, reconstructed_tensors_mask = reconstruct(subject,
-                                                                        all_indices, lr_patches, mask_lr, target_resolution, model, model_name, imputer_name, scaler)
+                                                                        all_indices, lr_patches, mask_lr, target_resolution, model, model_name, rate, imputer_name)
 
         # load previously fitted DTIs
         tensor_file_hr = np.load(
