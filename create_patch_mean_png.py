@@ -8,6 +8,19 @@ n = 2
 m = 2
 edge = 2*n + 1
 
+# [[True,  True,  True,  False,  True],
+#          [True,  True,  True,  False,  True],
+#          [True,  True,  True,  True, True],
+#          [True,  True, True, True, False],
+#          [True, True, False, False, False]],
+
+        # [[True,  True,  False,  False,  False],
+        #  [True,  True,  False,  False,  False],
+        #  [True,  True,  True,  False, False],
+        #  [True,  True, True, True, False],
+        #  [True, True, True, True, True]],
+
+
 mask = np.array([[[False, False, False, False, False],
          [False, False, False, False, False],
          [False, False, False, False, False],
@@ -20,11 +33,11 @@ mask = np.array([[[False, False, False, False, False],
          [False, False, False, False, False],
          [False, False, False, False, False]],
 
-        [[True,  True,  True,  True,  True],
-         [True,  True,  True,  True,  True],
-         [True,  True,  True,  True, True],
-         [True,  True, True, True, False],
-         [True, True, False, False, False]],
+        [[False,  False,  False,  False,  False],
+         [True,  False,  False,  False,  False],
+         [True,  True,  False,  False, False],
+         [True,  True, True, False, False],
+         [True, True, True, True, False]],
 
         [[True,  True,  True,  True,  True],
          [True,  True,  True,  True,  True],
@@ -76,7 +89,7 @@ cfa /= cfa.max()
 scene.add(actor.tensor_slicer(evals, evecs, scalar_colors=cfa, sphere=sphere,
                               scale=0.3))
 
-path = 'images/patches/patch_full' + str(index) + '.png'
+path = 'images/patches/' + str(index) + 'patch_full.png'
 window.record(scene, n_frames=1, out_path=path,
               size=(1200, 1200))
 
@@ -119,6 +132,6 @@ cfa /= cfa.max()
 scene.add(actor.tensor_slicer(evals, evecs, scalar_colors=cfa, sphere=sphere,
                               scale=0.3))
 
-path = 'images/patches/patch_completed' + str(index) + '.png'
+path = 'images/patches/' + str(index) + 'patch_completed.png'
 window.record(scene, n_frames=1, out_path=path,
               size=(1200, 1200))
