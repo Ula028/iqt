@@ -29,7 +29,7 @@ def estimate_random_forest(train_lr, train_hr):
     #     scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
     # max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
     # bootstrap = hp.choice('bootstrap', [True, False])
-    
+
     evals = 20
     estim = HyperoptEstimator(algo=tpe.suggest, regressor=random_forest_regression('my_forest', bootstrap=False),
                               preprocessing=[], max_evals=evals, trial_timeout=10800)
@@ -37,20 +37,23 @@ def estimate_random_forest(train_lr, train_hr):
 
     return estim.best_model()
 
+
 def find_reg_tree(train_lr, train_hr):
-    reg_tree = DecisionTreeRegressor(max_features='sqrt').fit(train_lr, train_hr)
-    
+    reg_tree = DecisionTreeRegressor(
+        max_features='sqrt').fit(train_lr, train_hr)
+
     param_dist = {"max_depth": randint(20, 150),
-                "min_samples_split": randint(5, 50),
-                "min_samples_leaf": randint(1, 25)}
-    
+                  "min_samples_split": randint(5, 50),
+                  "min_samples_leaf": randint(1, 25)}
+
     n_iter_search = 50
-    random_search = RandomizedSearchCV(reg_tree, param_distributions=param_dist, n_iter=n_iter_search)
+    random_search = RandomizedSearchCV(
+        reg_tree, param_distributions=param_dist, n_iter=n_iter_search)
     random_search.fit(train_lr, train_hr)
-    
+
     return random_search.best_estimator_
-    
-    
+
+
 def train_lin_reg(train_lr, train_hr, datasample_rate):
     print("Training the linear regression model...")
     lin_reg = LinearRegression().fit(train_lr, train_hr)
@@ -64,8 +67,8 @@ def train_lin_reg(train_lr, train_hr, datasample_rate):
 
 def train_reg_tree(train_lr, train_hr, datasample_rate):
     print("Training the decision tree regressor...")
-    reg_tree = DecisionTreeRegressor(
-        max_depth=25, max_features='sqrt').fit(train_lr, train_hr)
+    reg_tree = DecisionTreeRegressor(max_depth=102, max_features='sqrt', min_samples_leaf=24,
+                                     min_samples_split=19).fit(train_lr, train_hr)
 
     # save the model
     with open('models/reg_tree_model' + str(datasample_rate) + '.pickle', 'wb') as handle:
@@ -75,10 +78,9 @@ def train_reg_tree(train_lr, train_hr, datasample_rate):
 
 
 def train_ran_forest(train_lr, train_hr, datasample_rate):
-    print("Training the decision tree regressor...")
-    ran_forest = RandomForestRegressor(bootstrap=False, max_features=0.34095235168974203,
-                                       n_estimators=216, n_jobs=-1,
-                                       random_state=3, verbose=False).fit(train_lr, train_hr)
+    print("Training the random forest...")
+    ran_forest = RandomForestRegressor(bootstrap=False, max_features=0.4346383681719076,
+                                       n_estimators=50, n_jobs=-1, random_state=1).fit(train_lr, train_hr)
 
     # save the model
     with open('models/ran_forest_model' + str(datasample_rate) + '.pickle', 'wb') as handle:
@@ -115,6 +117,6 @@ def calculate_gaussian(train_lr):
 
 
 if __name__ == "__main__":
-    rate = 1
+    rate = 5
     train_lr, train_hr = utils.load_training_data(rate)
-    lin_reg = train_lin_reg(train_lr, train_hr, rate)
+    ran_forest = train_ran_forest(train_lr, train_hr, rate)
