@@ -13,7 +13,6 @@ import utils
 
 upsample_rate = 2  # the super-resolution factor (m in paper)
 # the radius of the low-res input patch i.e. the input is a cubic patch of size (2*input_radius+1)^3 (n in paper)
-input_radius = 2
 
 subjects_test = ["175136", "180230", "468050",
                  "902242", "886674", "962058", "103212", "792867"]
@@ -122,7 +121,6 @@ def reconstruct(subject, all_indices, tensors_lr, mask_lr, target_res, model, mo
 
         # patch is partially contained in the brain and boundary reconstruction is on
         elif rec_boundary and p_mask[n, n, n] and elem_present >= min_input_size:
-            print("in boudnary")
             if imputer_name == 'iterative' or imputer_name == 'knn':
                 # fill the patch using the imputer
                 p_patch = tensors_lr[(x-n):(x+n+1), (y-n):(y+n+1), (z-n):(z+n+1)]
@@ -181,10 +179,11 @@ def masked_rmse(original_hr, reconst_hr, reconst_mask):
 
 if __name__ == "__main__":
     
-    rec_boundary = False  # use boundary reconstruction
+    rec_boundary = True  # use boundary reconstruction
     imputer_name = 'conditional'  # iterative, conditional
-    model_name = 'lin_reg'  # reg_tree, ran_forest, lin_reg
+    model_name = 'reg_tree'  # reg_tree, ran_forest, lin_reg
     rate = 10
+    input_radius = 2
 
     starttime = timeit.default_timer()
 
@@ -196,7 +195,7 @@ if __name__ == "__main__":
     else:
         model = utils.load_rand_forest_model(rate)
 
-    for subject in tqdm(subjects_test):
+    for subject in subjects_test:
 
         print()
         print("RECONSTRUCTION FOR SUBJECT:", subject)
