@@ -15,9 +15,11 @@ def subject_dt_rmse(subject, model_name, rate):
     tensor_file_hr = np.load("preprocessed_data/" + subject + "tensors_hr.npz")
     tensors_hr = tensor_file_hr['tensors_hr']
 
-    # load reconstructed hr DTIs
+    # load tensor file
     tensor_file_rec = np.load(
-        'reconstructed/' + subject + model_name + str(rate) + '_tensors.npz')
+        'reconstructed/' + subject + model_name +  str(rate) + '_tensors.npz')
+    
+    # load DTIs and mask from file
     if model_name == 'inter':
         tensors_rec = tensor_file_rec['tensors_hr']
         mask = tensor_file_rec['mask_hr']
@@ -29,7 +31,6 @@ def subject_dt_rmse(subject, model_name, rate):
     new_size = tensors_rec.shape
     if new_size != tensors_hr.shape:
         tensors_hr = tensors_hr[:new_size[0], :new_size[1], :new_size[2]]
-
 
     # flatten DT matrices
     tensors_hr = np.reshape(
@@ -53,6 +54,11 @@ def subject_dt_rmse(subject, model_name, rate):
     median = np.median(square_root)
     print("Median for subject " + subject + ": " + str(median))
     
+    # calculate error as a percentage
+    abs_diff = np.abs(tensors_rec[:, mask] - tensors_hr[:, mask])
+    perc = np.divide(abs_diff, tensors_hr[:, mask])
+    print(np.median(perc))
+    
     return median
 
 def total_dt_rmse(model_name, rate):
@@ -64,6 +70,6 @@ def total_dt_rmse(model_name, rate):
 
 if __name__ == "__main__":
 
-    rate = 25
+    rate = 10
     model_name = 'lin_reg'  # inter, lin_reg, reg_tree, ran_forest
     print(total_dt_rmse(model_name, rate))
