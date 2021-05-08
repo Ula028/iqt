@@ -68,7 +68,7 @@ def linear_interpolation(subject):
     evecs_hr = tenfit_hr.evecs
     print("High resolutions tensors:", quadratic_tensors_hr.shape)
     # save DTIs, eigenvectors, eigenvalues and mask to a file
-    filename = "reconstructed/" + subject + "inter_tensors.npz"
+    filename = "reconstructed/" + subject + "inter" + str(order) + "_tensors.npz"
     np.savez_compressed(filename, tensors_hr=quadratic_tensors_hr, mask_hr=mask_hr,
                         evals_hr=evals_hr, evecs_hr=evecs_hr)
 
