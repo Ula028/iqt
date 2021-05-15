@@ -134,9 +134,9 @@ def load_patches(subject, hr=False):
         patches = dict_data['patches_lr']
     return patches
 
-def load_testing_data():
+def load_testing_data(datasample_rate):
     print("Loading testing data...")
-    dict_data = np.load('preprocessed_data/test_data.npz')
+    dict_data = np.load('preprocessed_data/test_data' + str(datasample_rate) + '.npz')
     patches_lr = dict_data['patches_lr']
     patches_hr = dict_data['patches_hr']
     print("Test patches_lr shape:", patches_lr.shape)
