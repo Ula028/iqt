@@ -2,33 +2,34 @@
 using previously created dataset.
 """
 
-import utils
+import pickle
+
+import numpy as np
+from hpsklearn import HyperoptEstimator, random_forest_regression
+from hyperopt import hp, tpe
+from hyperopt.pyll.base import scope
+from hyperopt.pyll.stochastic import sample
+from scipy.stats import randint
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics import mean_squared_error
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from hyperopt.pyll.stochastic import sample
-from hyperopt.pyll.base import scope
-from hyperopt import hp, tpe
-from hpsklearn import HyperoptEstimator, random_forest_regression, min_max_scaler
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.feature_selection import SequentialFeatureSelector
-from scipy.stats import randint
-import numpy as np
-import pickle
+from permetrics.regression import Metrics
+
+import utils
 
 
 def estimate_random_forest(train_lr, train_hr):
-    # n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 14, 1)))
-    # max_depth = sample(scope.int(hp.quniform('max_depth', 40, 50, 1)))
-    # min_samples_split = sample(
-    #     scope.int(hp.quniform('min_samples_split', 1, 40, 1)))
-    # min_samples_leaf = sample(
-    #     scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
-    # max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
-    # bootstrap = hp.choice('bootstrap', [True, False])
+    n_estimators = sample(scope.int(hp.quniform('n_estimators', 10, 14, 1)))
+    max_depth = sample(scope.int(hp.quniform('max_depth', 40, 50, 1)))
+    min_samples_split = sample(
+        scope.int(hp.quniform('min_samples_split', 1, 40, 1)))
+    min_samples_leaf = sample(
+        scope.int(hp.quniform('min_samples_leaf', 1, 20, 1)))
+    max_features = hp.choice('max_features', ['auto', 'sqrt', 'log2'])
+    bootstrap = hp.choice('bootstrap', [True, False])
 
     evals = 20
     estim = HyperoptEstimator(algo=tpe.suggest, regressor=random_forest_regression('my_forest', bootstrap=False),
@@ -115,8 +116,16 @@ def calculate_gaussian(train_lr):
 
     return mean, covariance
 
-
 if __name__ == "__main__":
-    rate = 5
-    train_lr, train_hr = utils.load_training_data(rate)
-    ran_forest = train_ran_forest(train_lr, train_hr, rate)
+    rate = 10
+    lr, hr = utils.load_training_data(rate)
+    model = train_ran_forest(lr, hr, rate)
+        
+    lr, hr = utils.load_testing_data(5)
+    pred_mod = model.predict(lr)
+    
+    obj = Metrics(hr.flatten(), pred_mod.flatten())
+    err = obj.mean_arctangent_absolute_percentage_error(clean=True, decimal=5)
+    
+    print("Mean arctangent absolute percentage error for the model:", err)
+    
