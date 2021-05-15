@@ -7,8 +7,8 @@ from reconstruct import reconstruct
 
 if __name__ == "__main__":
 
-    subject = '175136'
-    which = 'lin_reg'
+    subject = '103212'
+    which = 'lr'
 
     if which == 'hr':
         # load previously fitted DTIs
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     elif which == 'lr':
         # load previously fitted DTIs
         tensor_file_hr = np.load(
-            "preprocessed_data/" + subject + "tensors.npz")
+            "preprocessed_data/" + subject + "tensors_lr.npz")
 
         # get original hr eigenvalues and eigenvectors
         evals = tensor_file_hr['evals_lr']
